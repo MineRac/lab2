@@ -8,13 +8,13 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  name      String?
-  role      String   @default("VIEWER")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String      @id @default(cuid())
+  email      String      @unique
+  password   String
+  name       String?
+  role       String      @default("VIEWER")
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
 
   autoOrders AutoOrder[]
 }
@@ -47,47 +47,45 @@ model StockMovement {
   note      String?
   createdAt DateTime @default(now())
 
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 model AutoOrder {
-  id             String   @id @default(cuid())
-  productId      String
-  userId         String?
-
-  triggerLevel   Int
-  orderQuantity  Int
-  isActive       Boolean  @default(true)
+  id              String   @id @default(cuid())
+  productId       String
+  userId          String?
+  triggerLevel    Int
+  orderQuantity   Int
+  isActive        Boolean  @default(true)
   lastTriggeredAt DateTime?
-
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  user    User?   @relation(fields: [userId], references: [id])
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
 }
 
 model Order {
-  id               String   @id @default(cuid())
-  productId        String
-  quantity         Int
-  status           String
-  totalPrice       Float?
-  orderedAt        DateTime @default(now())
-  expectedDelivery DateTime?
-  deliveredAt      DateTime?
-  externalId       String?
+  id                String   @id @default(cuid())
+  productId         String
+  quantity          Int
+  status            String
+  totalPrice        Float?
+  orderedAt         DateTime @default(now())
+  expectedDelivery  DateTime?
+  deliveredAt       DateTime?
+  externalId        String?
 
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 model DemandPrediction {
-  id                 String   @id @default(cuid())
-  productId          String
-  predictedDate      DateTime
-  predictedQuantity  Float
-  modelVersion       String
-  createdAt          DateTime @default(now())
+  id                String   @id @default(cuid())
+  productId         String
+  predictedDate     DateTime
+  predictedQuantity Float
+  modelVersion      String
+  createdAt         DateTime @default(now())
 
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
