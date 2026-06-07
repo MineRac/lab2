@@ -7,4 +7,9 @@
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" }
   ]
+  {
+  "buildCommand": "cd app && npm run vercel-build",
+  "outputDirectory": "app/dist",
+  "installCommand": "cd app && npm install"
+}
 }
