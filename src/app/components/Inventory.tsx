@@ -1,11 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  Search,
-  Filter,
-  Plus,
-  Download,
-  AlertCircle,
-} from "lucide-react";
+import { Search, Filter, Plus, AlertCircle } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
@@ -41,8 +35,9 @@ export default function Inventory() {
   }, []);
 
   const filtered = inventory.filter((item) => {
-    const name = item.product?.name?.toLowerCase() || "";
+    const name = item.name?.toLowerCase() || "";
     const sku = item.id?.toString() || "";
+
     return (
       name.includes(search.toLowerCase()) ||
       sku.includes(search.toLowerCase())
@@ -50,24 +45,19 @@ export default function Inventory() {
   });
 
   const getStatus = (item: any) => {
-    if (item.quantity <= item.min_stock) {
-      return "Критический";
-    }
-    if (item.quantity <= item.min_stock * 1.5) {
-      return "Низкий запас";
-    }
+    if (item.quantity <= item.minStock) return "Критический";
+    if (item.quantity <= item.minStock * 1.5) return "Низкий запас";
     return "В наличии";
   };
 
   const getBadge = (status: string) => {
-    switch (status) {
-      case "Критический":
-        return <Badge variant="destructive">{status}</Badge>;
-      case "Низкий запас":
-        return <Badge variant="secondary">{status}</Badge>;
-      default:
-        return <Badge>{status}</Badge>;
-    }
+    if (status === "Критический")
+      return <Badge variant="destructive">{status}</Badge>;
+
+    if (status === "Низкий запас")
+      return <Badge variant="secondary">{status}</Badge>;
+
+    return <Badge>{status}</Badge>;
   };
 
   if (loading) {
@@ -75,36 +65,34 @@ export default function Inventory() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <div className="space-y-4">
+      {/* HEADER */}
       <Card>
         <CardHeader>
           <CardTitle>Склад</CardTitle>
-        </CardHeader>
-        <CardContent className="flex gap-3">
-          <div className="relative w-full">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+
+          <div className="flex gap-2 mt-4">
             <Input
               placeholder="Поиск по товару или SKU..."
               className="pl-10"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
+
+            <Button variant="outline">
+              <Filter className="h-4 w-4 mr-2" />
+              Фильтр
+            </Button>
+
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Добавить
+            </Button>
           </div>
-
-          <Button variant="outline">
-            <Filter className="h-4 w-4 mr-2" />
-            Фильтр
-          </Button>
-
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Добавить
-          </Button>
-        </CardContent>
+        </CardHeader>
       </Card>
 
-      {/* Table */}
+      {/* TABLE */}
       <Card>
         <CardHeader>
           <CardTitle>Товары</CardTitle>
@@ -135,23 +123,23 @@ export default function Inventory() {
                       SKU-{item.id}
                     </TableCell>
 
-                    <TableCell>{item.product?.name}</TableCell>
+                    <TableCell>{item.name}</TableCell>
 
-                    <TableCell>{item.product?.category}</TableCell>
+                    <TableCell>{item.category}</TableCell>
 
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        {item.quantity <= item.min_stock && (
+                        {item.quantity <= item.minStock && (
                           <AlertCircle className="h-4 w-4 text-amber-500" />
                         )}
                         {item.quantity}
                       </div>
                     </TableCell>
 
-                    <TableCell>{item.min_stock}</TableCell>
+                    <TableCell>{item.minStock}</TableCell>
 
                     <TableCell>
-                      ₽{item.product?.price?.toLocaleString("ru-RU")}
+                      ₽{item.price?.toLocaleString("ru-RU")}
                     </TableCell>
 
                     <TableCell>{item.location}</TableCell>
