@@ -1,5 +1,4 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { verifyToken } from './jwt';
 
 export function withAuth(handler: Function) {
   return async (req: VercelRequest, res: VercelResponse) => {
@@ -10,7 +9,7 @@ export function withAuth(handler: Function) {
     const token = authHeader.slice(7);
     try {
       const payload = verifyToken(token);
-      req.user = payload; // добавим поле user в req
+      (req as any).user = payload;
       return handler(req, res);
     } catch {
       return res.status(401).json({ error: 'Invalid token' });
