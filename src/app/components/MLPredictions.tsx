@@ -112,7 +112,7 @@ export default function MLPredictions() {
               <Tooltip />
               <Legend />
               <Area key="area-actual" type="monotone" dataKey="actual" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.3} name="Фактический спрос" />
-              <Area key="area-predicted" type="monotone" dataKey="predicted" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.3} name="Прогноз модели" strokeDasharray="5 5" />
+              <Area key="area-predicted" type="monotone" dataKey="predicted" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.3} name="Прогноз ML" strokeDasharray="5 5" />
             </AreaChart>
           </ResponsiveContainer>
         </CardContent>
@@ -143,7 +143,7 @@ export default function MLPredictions() {
                   <div className="bg-slate-50 p-3 rounded-lg">
                     <div className="text-xs text-slate-600 mb-1">Рекомендуемый заказ</div>
                     <div className="text-lg font-bold text-slate-900">{rec.recommendedOrder} шт</div>
-                  </div>
+                  </div>then tab to mov
                   <div className="bg-slate-50 p-3 rounded-lg">
                     <div className="text-xs text-slate-600 mb-1">Срок заказа</div>
                     <div className="text-lg font-bold text-slate-900">{rec.days} дней</div>
