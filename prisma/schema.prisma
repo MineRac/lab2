@@ -16,7 +16,7 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  autoOrders AutoOrder[]
+  autoOrders AutoOrder[]  // связь: у пользователя может быть много созданных правил
 }
 
 model Product {
@@ -25,24 +25,25 @@ model Product {
   name        String
   category    String
   price       Float
-  cost        Float?          // себестоимость
+  cost        Float?
   stock       Int      @default(0)
-  minStock    Int      @default(10)   // порог для авто‑заказа
+  minStock    Int      @default(10)
   maxStock    Int      @default(100)
-  location    String?           // стеллаж, ряд
+  location    String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   movements   StockMovement[]
   autoRules   AutoOrder[]
   orders      Order[]
+  predictions DemandPrediction[]  // обратная связь для DemandPrediction
 }
 
 model StockMovement {
   id        String   @id @default(cuid())
   productId String
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  quantity  Int      // положительное = приход, отрицательное = расход
+  quantity  Int
   type      MovementType
   note      String?
   createdAt DateTime @default(now())
@@ -56,9 +57,11 @@ model AutoOrder {
   orderQuantity Int
   isActive    Boolean  @default(true)
   lastTriggeredAt DateTime?
-  createdBy   String?  // userId
+  createdBy   String?  // ID пользователя (связь с User)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  user        User?    @relation(fields: [createdBy], references: [id])  // обратная связь с User
 }
 
 model Order {
@@ -71,7 +74,7 @@ model Order {
   orderedAt   DateTime @default(now())
   expectedDelivery DateTime?
   deliveredAt DateTime?
-  externalId  String?   // номер заказа у поставщика
+  externalId  String?
 }
 
 model DemandPrediction {
