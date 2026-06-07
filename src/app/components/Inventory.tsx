@@ -1,162 +1,173 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 import {
   Search,
+  Filter,
+  Plus,
+  Download,
   AlertCircle,
-  Package2
-} from 'lucide-react';
+} from "lucide-react";
 
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Input } from './ui/input';
-import { Badge } from './ui/badge';
-import { Button } from './ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Input } from "./ui/input";
+import { Button } from "./ui/button";
+import { Badge } from "./ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "./ui/table";
 
-const API_URL = 'http://localhost:8000';
+import { getInventory } from "../../api/inventory";
 
 export default function Inventory() {
-  const [items, setItems] = useState<any[]>([]);
-  const [search, setSearch] = useState('');
-  const [category, setCategory] = useState('all');
-  const [status, setStatus] = useState('all');
+  const [inventory, setInventory] = useState<any[]>([]);
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${API_URL}/inventory`)
-      .then(r => r.json())
-      .then(setItems);
+    const load = async () => {
+      try {
+        const data = await getInventory();
+        setInventory(data);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    load();
   }, []);
 
-  const filtered = items.filter(i => {
-    const matchesSearch =
-      i.name.toLowerCase().includes(search.toLowerCase()) ||
-      i.id.toLowerCase().includes(search.toLowerCase());
-
-    const matchesCategory =
-      category === 'all' || i.category === category;
-
-    const matchesStatus =
-      status === 'all' || i.status === status;
-
-    return matchesSearch && matchesCategory && matchesStatus;
+  const filtered = inventory.filter((item) => {
+    const name = item.product?.name?.toLowerCase() || "";
+    const sku = item.id?.toString() || "";
+    return (
+      name.includes(search.toLowerCase()) ||
+      sku.includes(search.toLowerCase())
+    );
   });
 
-  const getStatusBadge = (status: string) => {
+  const getStatus = (item: any) => {
+    if (item.quantity <= item.min_stock) {
+      return "Критический";
+    }
+    if (item.quantity <= item.min_stock * 1.5) {
+      return "Низкий запас";
+    }
+    return "В наличии";
+  };
+
+  const getBadge = (status: string) => {
     switch (status) {
-      case 'В наличии':
-        return <Badge className="bg-green-600">{status}</Badge>;
-
-      case 'Низкий запас':
-        return <Badge className="bg-amber-500">{status}</Badge>;
-
-      case 'Критический':
-        return <Badge className="bg-red-600">{status}</Badge>;
-
+      case "Критический":
+        return <Badge variant="destructive">{status}</Badge>;
+      case "Низкий запас":
+        return <Badge variant="secondary">{status}</Badge>;
       default:
         return <Badge>{status}</Badge>;
     }
   };
 
+  if (loading) {
+    return <div className="p-6 text-slate-500">Загрузка склада...</div>;
+  }
+
   return (
     <div className="space-y-6">
-
-      {/* HEADER */}
+      {/* Header */}
       <Card>
         <CardHeader>
           <CardTitle>Склад</CardTitle>
         </CardHeader>
-
-        <CardContent className="space-y-4">
-
-          <div className="flex gap-2">
-
-            <div className="relative flex-1">
-              <Search className="absolute left-2 top-2 h-4 w-4 text-gray-400" />
-              <Input
-                className="pl-8"
-                placeholder="Поиск..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-
+        <CardContent className="flex gap-3">
+          <div className="relative w-full">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Поиск по товару или SKU..."
+              className="pl-10"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
 
-          <div className="flex gap-2">
+          <Button variant="outline">
+            <Filter className="h-4 w-4 mr-2" />
+            Фильтр
+          </Button>
 
-            <select
-              className="border p-2 rounded"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-            >
-              <option value="all">Все категории</option>
-              <option value="Электроника">Электроника</option>
-              <option value="Периферия">Периферия</option>
-              <option value="Комплектующие">Комплектующие</option>
-              <option value="Аудио">Аудио</option>
-            </select>
-
-            <select
-              className="border p-2 rounded"
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-            >
-              <option value="all">Все статусы</option>
-              <option value="В наличии">В наличии</option>
-              <option value="Низкий запас">Низкий запас</option>
-              <option value="Критический">Критический</option>
-            </select>
-
-          </div>
-
+          <Button>
+            <Plus className="h-4 w-4 mr-2" />
+            Добавить
+          </Button>
         </CardContent>
       </Card>
 
-      {/* TABLE */}
+      {/* Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Товары ({filtered.length})</CardTitle>
+          <CardTitle>Товары</CardTitle>
         </CardHeader>
 
         <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>SKU</TableHead>
+                <TableHead>Название</TableHead>
+                <TableHead>Категория</TableHead>
+                <TableHead>Количество</TableHead>
+                <TableHead>Мин. запас</TableHead>
+                <TableHead>Цена</TableHead>
+                <TableHead>Локация</TableHead>
+                <TableHead>Статус</TableHead>
+              </TableRow>
+            </TableHeader>
 
-          <div className="space-y-2">
+            <TableBody>
+              {filtered.map((item) => {
+                const status = getStatus(item);
 
-            {filtered.map((item) => (
-              <div
-                key={item.id}
-                className="flex justify-between border p-3 rounded"
-              >
+                return (
+                  <TableRow key={item.id}>
+                    <TableCell className="font-medium">
+                      SKU-{item.id}
+                    </TableCell>
 
-                <div>
-                  <div className="font-medium">
-                    {item.name}
-                  </div>
+                    <TableCell>{item.product?.name}</TableCell>
 
-                  <div className="text-sm text-gray-500">
-                    {item.id} • {item.category}
-                  </div>
+                    <TableCell>{item.product?.category}</TableCell>
 
-                  <div className="text-sm">
-                    Остаток: {item.quantity} / min {item.minStock}
-                  </div>
-                </div>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {item.quantity <= item.min_stock && (
+                          <AlertCircle className="h-4 w-4 text-amber-500" />
+                        )}
+                        {item.quantity}
+                      </div>
+                    </TableCell>
 
-                <div className="flex items-center gap-3">
+                    <TableCell>{item.min_stock}</TableCell>
 
-                  {item.quantity < item.minStock && (
-                    <AlertCircle className="text-amber-500" />
-                  )}
+                    <TableCell>
+                      ₽{item.product?.price?.toLocaleString("ru-RU")}
+                    </TableCell>
 
-                  {getStatusBadge(item.status)}
+                    <TableCell>{item.location}</TableCell>
 
-                </div>
+                    <TableCell>{getBadge(status)}</TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
 
-              </div>
-            ))}
-
+          <div className="mt-4 text-sm text-slate-500">
+            Показано {filtered.length} из {inventory.length}
           </div>
-
         </CardContent>
       </Card>
-
     </div>
   );
 }
