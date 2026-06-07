@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+numpy
+gymnasium
+torch
+stable-baselines3
+sqlalchemy
+pydantic
