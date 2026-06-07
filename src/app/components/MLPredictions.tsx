@@ -51,7 +51,6 @@ export default function MLPredictions() {
 
   return (
     <div className="space-y-6">
-      {/* ML Model Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -101,7 +100,7 @@ export default function MLPredictions() {
       {/* Forecast Chart */}
       <Card>
         <CardHeader>
-          <CardTitle>Прогноз спроса (Machine Learning)</CardTitle>
+          <CardTitle>Прогноз спроса</CardTitle>
           <CardDescription>Сравнение фактического и прогнозируемого спроса с уровнем уверенности</CardDescription>
         </CardHeader>
         <CardContent>
@@ -113,7 +112,7 @@ export default function MLPredictions() {
               <Tooltip />
               <Legend />
               <Area key="area-actual" type="monotone" dataKey="actual" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.3} name="Фактический спрос" />
-              <Area key="area-predicted" type="monotone" dataKey="predicted" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.3} name="Прогноз ML" strokeDasharray="5 5" />
+              <Area key="area-predicted" type="monotone" dataKey="predicted" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.3} name="Прогноз модели" strokeDasharray="5 5" />
             </AreaChart>
           </ResponsiveContainer>
         </CardContent>
@@ -122,7 +121,7 @@ export default function MLPredictions() {
       {/* Restock Recommendations */}
       <Card>
         <CardHeader>
-          <CardTitle>Рекомендации по пополнению запасов (ML)</CardTitle>
+          <CardTitle>Рекомендации по пополнению запасов</CardTitle>
           <CardDescription>Автоматические рекомендации на основе прогнозов машинного обучения</CardDescription>
         </CardHeader>
         <CardContent>
@@ -150,7 +149,7 @@ export default function MLPredictions() {
                     <div className="text-lg font-bold text-slate-900">{rec.days} дней</div>
                   </div>
                   <div className="bg-slate-50 p-3 rounded-lg">
-                    <div className="text-xs text-slate-600 mb-1">Уверенность ML</div>
+                    <div className="text-xs text-slate-600 mb-1">Уверенность модели</div>
                     <div className="text-lg font-bold text-slate-900">{rec.confidence}%</div>
                   </div>
                 </div>
@@ -168,7 +167,7 @@ export default function MLPredictions() {
       {/* Seasonality Analysis */}
       <Card>
         <CardHeader>
-          <CardTitle>Анализ сезонности (ML)</CardTitle>
+          <CardTitle>Анализ сезонности</CardTitle>
           <CardDescription>Выявление сезонных паттернов в данных продаж</CardDescription>
         </CardHeader>
         <CardContent>
@@ -203,10 +202,9 @@ export default function MLPredictions() {
         </CardContent>
       </Card>
 
-      {/* ML Insights */}
       <Card>
         <CardHeader>
-          <CardTitle>Ключевые выводы ML</CardTitle>
+          <CardTitle>Ключевые выводы модели</CardTitle>
           <CardDescription>Автоматически обнаруженные паттерны и аномалии</CardDescription>
         </CardHeader>
         <CardContent>
