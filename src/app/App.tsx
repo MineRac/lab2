@@ -41,7 +41,6 @@ export default function App() {
             </div>
             <div>
               <h1 className="text-xl font-semibold text-slate-900">Система управления складом</h1>
-              <p className="text-sm text-slate-600">С прогнозированием на основе ML</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
