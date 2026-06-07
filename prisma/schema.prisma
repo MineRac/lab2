@@ -16,7 +16,7 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  autoOrders AutoOrder[]  // связь: у пользователя может быть много созданных правил
+  autoOrders AutoOrder[]
 }
 
 model Product {
@@ -36,7 +36,7 @@ model Product {
   movements   StockMovement[]
   autoRules   AutoOrder[]
   orders      Order[]
-  predictions DemandPrediction[]  // обратная связь для DemandPrediction
+  predictions DemandPrediction[]
 }
 
 model StockMovement {
@@ -57,11 +57,11 @@ model AutoOrder {
   orderQuantity Int
   isActive    Boolean  @default(true)
   lastTriggeredAt DateTime?
-  createdBy   String?  // ID пользователя (связь с User)
+  createdBy   String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  user        User?    @relation(fields: [createdBy], references: [id])  // обратная связь с User
+  user        User?    @relation(fields: [createdBy], references: [id])
 }
 
 model Order {
