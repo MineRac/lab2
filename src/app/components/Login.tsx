@@ -23,7 +23,6 @@ export default function Login({ onLogin }: LoginProps) {
       return;
     }
 
-    // Простая проверка (в реальном приложении это должно быть на сервере)
     if (username === 'admin' && password === 'admin') {
       setError('');
       onLogin(username, password);
@@ -129,7 +128,7 @@ export default function Login({ onLogin }: LoginProps) {
 
         {/* Footer */}
         <div className="mt-6 text-center text-sm text-slate-600">
-          <p>© 2026 Система управления складом с ML</p>
+          <p>© 2026 Система управления складом </p>
         </div>
       </div>
     </div>
