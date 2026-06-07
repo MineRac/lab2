@@ -53,21 +53,15 @@ model StockMovement {
 }
 
 model AutoOrder {
-  id              String   @id @default(cuid())
-  productId       String
-  userId          String
-  triggerLevel    Int
-  orderQuantity   Int
-  isActive        Boolean  @default(true)
-  lastTriggeredAt DateTime?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id            String   @id @default(cuid())
+  productId     String
+  userId        String
+  triggerLevel  Int
+  orderQuantity Int
+  isActive      Boolean  @default(true)
 
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([productId])
-  @@index([userId])
 }
 
 model Order {
