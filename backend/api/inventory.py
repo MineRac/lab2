@@ -1,19 +1,11 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
+import { api } from "./client";
 
-from database import get_db
-from models import Product, Inventory
+export const getInventory = async () => {
+  const res = await api.get("/inventory");
+  return res.data;
+};
 
-router = APIRouter()
-
-
-# GET все товары
-@router.get("/products")
-def get_products(db: Session = Depends(get_db)):
-    return db.query(Product).all()
-
-
-# GET склад
-@router.get("/inventory")
-def get_inventory(db: Session = Depends(get_db)):
-    return db.query(Inventory).all()
+export const getProducts = async () => {
+  const res = await api.get("/products");
+  return res.data;
+};
