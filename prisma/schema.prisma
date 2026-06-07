@@ -15,6 +15,8 @@ model User {
   role      String   @default("VIEWER")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  autoOrders AutoOrder[]
 }
 
 model Product {
@@ -30,6 +32,11 @@ model Product {
   location  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  stockMovements   StockMovement[]
+  autoOrders       AutoOrder[]
+  orders           Order[]
+  demandPredictions DemandPrediction[]
 }
 
 model StockMovement {
@@ -39,39 +46,50 @@ model StockMovement {
   type      String
   note      String?
   createdAt DateTime @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 model AutoOrder {
-  id          String   @id @default(cuid())
-  productId   String
-  triggerLevel Int
-  orderQuantity Int
-  isActive    Boolean  @default(true)
+  id             String   @id @default(cuid())
+  productId      String
+  userId         String?
+
+  triggerLevel   Int
+  orderQuantity  Int
+  isActive       Boolean  @default(true)
   lastTriggeredAt DateTime?
-  createdBy   String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id])
 }
 
 model Order {
-  id          String   @id @default(cuid())
-  productId   String
-  quantity    Int
-  status      String
-  totalPrice  Float?
-  orderedAt   DateTime @default(now())
+  id               String   @id @default(cuid())
+  productId        String
+  quantity         Int
+  status           String
+  totalPrice       Float?
+  orderedAt        DateTime @default(now())
   expectedDelivery DateTime?
-  deliveredAt DateTime?
-  externalId  String?
+  deliveredAt      DateTime?
+  externalId       String?
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 model DemandPrediction {
-  id         String   @id @default(cuid())
-  productId  String
-  predictedDate DateTime
-  predictedQuantity Float
-  modelVersion String
-  createdAt  DateTime @default(now())
+  id                 String   @id @default(cuid())
+  productId          String
+  predictedDate      DateTime
+  predictedQuantity  Float
+  modelVersion       String
+  createdAt          DateTime @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@unique([productId, predictedDate])
 }
