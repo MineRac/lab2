@@ -87,4 +87,5 @@
       "vite": "6.3.5"
     }
   }
+"prisma": { "seed": "ts-node prisma/seed.ts" }
 }
