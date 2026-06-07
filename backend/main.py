@@ -2,8 +2,7 @@ from fastapi import FastAPI
 from database import Base, engine
 
 from api.inventory import router as inventory_router
-
-app = FastAPI()
+app.include_router(inventory_router, prefix="/api")
 
 # создать таблицы
 Base.metadata.create_all(bind=engine)
