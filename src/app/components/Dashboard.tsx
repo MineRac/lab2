@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Package, TrendingUp, AlertTriangle, DollarSign, ShoppingCart, TrendingDown, Brain } from 'lucide-react';
+import { Package, TrendingUp, AlertTriangle, DollarSign, Brain } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Progress } from './ui/progress';
@@ -20,7 +20,7 @@ export default function Dashboard() {
     ]).then(([statsRes, trendRes, topRes]) => {
       setStats(statsRes);
       setTrendData(trendRes);
-      setTopProducts(topRes);
+      setTopProducts(topRes.data || []);
       setLoading(false);
     }).catch(console.error);
   }, []);
@@ -82,7 +82,7 @@ export default function Dashboard() {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Line type="monotone" dataKey="количество" stroke="#3b82f6" strokeWidth={2} />
+                <Line type="monotone" dataKey="quantity" stroke="#3b82f6" strokeWidth={2} />
               </LineChart>
             </ResponsiveContainer>
           </CardContent>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Bot, Settings, Package, DollarSign, Calendar, CheckCircle, Clock, Zap } from 'lucide-react';
+import { Bot, Settings, Package, DollarSign, Calendar, CheckCircle, Clock, Zap, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -25,7 +25,7 @@ export default function AutoOrders() {
       setRules(rulesData);
       setHistory(historyData);
       setLoading(false);
-    });
+    }).catch(console.error);
   }, []);
 
   const toggleAutoOrder = async (enabled: boolean) => {
@@ -39,29 +39,27 @@ export default function AutoOrders() {
     setHistory(updated);
   };
 
-  if (loading) return <div className="p-8">Загрузка...</div>;
+  if (loading) return <div className="p-8 flex justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
 
   return (
     <div className="space-y-6">
-      {/* Статистика аналогична старой, но данные из API */}
-      <div className="grid grid-cols-4 gap-4">...</div>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm">AI Автозаказы</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{history.length}</div><p className="text-xs">За последние 24ч</p></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Общая сумма</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">₽{(history.reduce((s,o:any)=>s+(o.totalPrice||0),0)/1e6).toFixed(1)}М</div></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Средняя уверенность</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{Math.round(history.reduce((s,o:any)=>s+(o.confidence||85),0)/history.length||85)}%</div><Progress value={85} className="mt-2" /></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Точность системы</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">97.2%</div></CardContent></Card>
+      </div>
 
       <Card className="border-blue-200 bg-blue-50/50">
         <CardHeader>
           <div className="flex justify-between items-center">
-            <div className="flex items-center gap-3">
-              <div className="bg-blue-600 p-2 rounded-lg"><Settings className="h-5 w-5 text-white" /></div>
-              <div><CardTitle>Настройки автоматизации</CardTitle><CardDescription>Параметры AI‑заказов</CardDescription></div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Label>{autoEnabled ? 'Включено' : 'Выключено'}</Label>
-              <Switch checked={autoEnabled} onCheckedChange={toggleAutoOrder} />
-            </div>
+            <div><CardTitle>Настройки автоматизации</CardTitle><CardDescription>Параметры AI‑заказов</CardDescription></div>
+            <div className="flex items-center gap-2"><Label>{autoEnabled ? 'Включено' : 'Выключено'}</Label><Switch checked={autoEnabled} onCheckedChange={toggleAutoOrder} /></div>
           </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            <div className="flex justify-between">
+            <div className="flex justify-between items-center">
               <Label>Минимальная уверенность AI: {threshold[0]}%</Label>
               <Slider value={threshold} onValueChange={setThreshold} min={50} max={100} step={5} disabled={!autoEnabled} className="w-64" />
             </div>

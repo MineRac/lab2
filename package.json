@@ -91,8 +91,8 @@
       "optional": true
     }
   },
-  "scripts": {
-    "vercel-build": "prisma generate && echo 'Build completed'"
+  "postinstall": "prisma generate",
+  "vercel-build": "prisma generate && echo 'Build completed'"
   },
   "pnpm": {
     "overrides": {

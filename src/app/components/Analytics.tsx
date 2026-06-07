@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { ResponsiveContainer, LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { api } from '../lib/api';
-import { TrendingUp, DollarSign, Package, ShoppingCart, ArrowUpRight } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 const COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b'];
 
@@ -11,23 +11,24 @@ export default function Analytics() {
   const [revenueData, setRevenueData] = useState([]);
   const [categoryDist, setCategoryDist] = useState([]);
   const [turnoverData, setTurnoverData] = useState([]);
-  const [topProducts, setTopProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
       api.get('/analytics/overview'),
       api.get('/analytics/revenue?months=6'),
       api.get('/analytics/categories'),
-      api.get('/analytics/turnover-by-category'),
-      api.get('/inventory?sort=revenue:desc&limit=5')
-    ]).then(([overview, revenue, categories, turnover, top]) => {
+      api.get('/analytics/turnover-by-category')
+    ]).then(([overview, revenue, categories, turnover]) => {
       setSummary(overview);
       setRevenueData(revenue);
       setCategoryDist(categories);
       setTurnoverData(turnover);
-      setTopProducts(top);
-    });
+      setLoading(false);
+    }).catch(console.error);
   }, []);
+
+  if (loading) return <div className="p-8 flex justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
 
   return (
     <div className="space-y-6">
@@ -41,8 +42,8 @@ export default function Analytics() {
       <Card><CardHeader><CardTitle>Выручка по месяцам</CardTitle></CardHeader><CardContent><ResponsiveContainer width="100%" height={300}><LineChart data={revenueData}><CartesianGrid /><XAxis dataKey="month" /><YAxis /><Tooltip /><Line type="monotone" dataKey="revenue" stroke="#3b82f6" /></LineChart></ResponsiveContainer></CardContent></Card>
 
       <div className="grid grid-cols-2 gap-6">
-        <Card><CardHeader><CardTitle>Категории</CardTitle></CardHeader><CardContent><PieChart width={400} height={300}><Pie data={categoryDist} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label><Cell fill="#3b82f6" /><Cell fill="#8b5cf6" /><Cell fill="#10b981" /><Cell fill="#f59e0b" /></Pie><Tooltip /></PieChart></CardContent></Card>
-        <Card><CardHeader><CardTitle>Оборачиваемость по категориям</CardTitle></CardHeader><CardContent><BarChart width={400} height={300} data={turnoverData}><CartesianGrid /><XAxis dataKey="category" /><YAxis /><Tooltip /><Bar dataKey="turnover" fill="#3b82f6" /></BarChart></CardContent></Card>
+        <Card><CardHeader><CardTitle>Категории</CardTitle></CardHeader><CardContent><ResponsiveContainer width="100%" height={300}><PieChart><Pie data={categoryDist} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>{categoryDist.map((_,idx) => <Cell key={idx} fill={COLORS[idx % COLORS.length]} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
+        <Card><CardHeader><CardTitle>Оборачиваемость по категориям</CardTitle></CardHeader><CardContent><ResponsiveContainer width="100%" height={300}><BarChart data={turnoverData}><CartesianGrid /><XAxis dataKey="category" /><YAxis /><Tooltip /><Bar dataKey="turnover" fill="#3b82f6" /></BarChart></ResponsiveContainer></CardContent></Card>
       </div>
     </div>
   );

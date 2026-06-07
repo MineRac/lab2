@@ -45,7 +45,6 @@ export default function Login({ onLogin }: LoginProps) {
           <h1 className="text-3xl font-bold text-slate-900 mb-2">Система управления складом</h1>
           <p className="text-slate-600">Авторизуйтесь для доступа к системе</p>
         </div>
-
         <Card className="shadow-xl border-slate-200">
           <CardHeader>
             <CardTitle>Вход в систему</CardTitle>
@@ -67,7 +66,6 @@ export default function Login({ onLogin }: LoginProps) {
                   />
                 </div>
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="password">Пароль</Label>
                 <div className="relative">
@@ -85,13 +83,10 @@ export default function Login({ onLogin }: LoginProps) {
                   </button>
                 </div>
               </div>
-
               {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{error}</div>}
-
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? 'Вход...' : 'Войти'}
               </Button>
-
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
                 <p className="text-sm font-medium text-blue-900 mb-2">Демо‑доступ:</p>
                 <div className="space-y-1 text-sm text-blue-700">

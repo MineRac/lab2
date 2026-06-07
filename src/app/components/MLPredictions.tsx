@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Brain, TrendingUp, Target, Zap, AlertTriangle, Calendar } from 'lucide-react';
+import { Brain, TrendingUp, Target, Zap, AlertTriangle, Calendar, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Progress } from './ui/progress';
@@ -25,10 +25,10 @@ export default function MLPredictions() {
       setRecommendations(rec);
       setSeasonality(seas);
       setLoading(false);
-    });
+    }).catch(console.error);
   }, []);
 
-  if (loading) return <div>Загрузка прогнозов...</div>;
+  if (loading) return <div className="p-8 flex justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
 
   return (
     <div className="space-y-6">

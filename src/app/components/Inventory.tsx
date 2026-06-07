@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Search, Plus, Download, AlertCircle, Loader2 } from 'lucide-react';
+import { Search, Plus, Download, AlertCircle, Loader2, Pencil, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
@@ -16,6 +16,7 @@ export default function Inventory() {
   const [category, setCategory] = useState('all');
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({ name: '', sku: '', category: '', price: 0, stock: 0, minStock: 0, location: '' });
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const fetchProducts = async () => {
@@ -25,7 +26,7 @@ export default function Inventory() {
       if (search) params.append('search', search);
       if (category !== 'all') params.append('category', category);
       const data = await api.get(`/inventory?${params.toString()}`);
-      setProducts(data);
+      setProducts(data.data || []);
     } finally {
       setLoading(false);
     }
@@ -35,13 +36,19 @@ export default function Inventory() {
     fetchProducts();
   }, [search, category]);
 
-  const handleAdd = async () => {
+  const handleSave = async () => {
     try {
-      await api.post('/inventory', form);
+      if (editingId) {
+        await api.put(`/inventory/${editingId}`, form);
+      } else {
+        await api.post('/inventory', form);
+      }
       setDialogOpen(false);
+      setEditingId(null);
+      setForm({ name: '', sku: '', category: '', price: 0, stock: 0, minStock: 0, location: '' });
       fetchProducts();
     } catch (err) {
-      alert('Ошибка добавления');
+      alert('Ошибка сохранения');
     }
   };
 
@@ -50,6 +57,12 @@ export default function Inventory() {
       await api.delete(`/inventory/${id}`);
       fetchProducts();
     }
+  };
+
+  const editProduct = (p: any) => {
+    setEditingId(p.id);
+    setForm(p);
+    setDialogOpen(true);
   };
 
   const getStatus = (stock: number, minStock: number) => {
@@ -70,22 +83,24 @@ export default function Inventory() {
             <div className="flex gap-2">
               <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button><Plus className="h-4 w-4 mr-2" />Добавить</Button>
+                  <Button onClick={() => { setEditingId(null); setForm({ name: '', sku: '', category: '', price: 0, stock: 0, minStock: 0, location: '' }); }}>
+                    <Plus className="h-4 w-4 mr-2" />Добавить
+                  </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Новый товар</DialogTitle>
+                    <DialogTitle>{editingId ? 'Редактировать' : 'Новый товар'}</DialogTitle>
                     <DialogDescription>Заполните поля</DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4">
-                    <Input placeholder="SKU" onChange={e => setForm({...form, sku: e.target.value})} />
-                    <Input placeholder="Название" onChange={e => setForm({...form, name: e.target.value})} />
-                    <Input placeholder="Категория" onChange={e => setForm({...form, category: e.target.value})} />
-                    <Input type="number" placeholder="Цена" onChange={e => setForm({...form, price: +e.target.value})} />
-                    <Input type="number" placeholder="Количество" onChange={e => setForm({...form, stock: +e.target.value})} />
-                    <Input type="number" placeholder="Мин. запас" onChange={e => setForm({...form, minStock: +e.target.value})} />
-                    <Input placeholder="Расположение" onChange={e => setForm({...form, location: e.target.value})} />
-                    <Button onClick={handleAdd}>Сохранить</Button>
+                    <Input placeholder="SKU" value={form.sku} onChange={e => setForm({...form, sku: e.target.value})} />
+                    <Input placeholder="Название" value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
+                    <Input placeholder="Категория" value={form.category} onChange={e => setForm({...form, category: e.target.value})} />
+                    <Input type="number" placeholder="Цена" value={form.price} onChange={e => setForm({...form, price: +e.target.value})} />
+                    <Input type="number" placeholder="Количество" value={form.stock} onChange={e => setForm({...form, stock: +e.target.value})} />
+                    <Input type="number" placeholder="Мин. запас" value={form.minStock} onChange={e => setForm({...form, minStock: +e.target.value})} />
+                    <Input placeholder="Расположение" value={form.location} onChange={e => setForm({...form, location: e.target.value})} />
+                    <Button onClick={handleSave}>Сохранить</Button>
                   </div>
                 </DialogContent>
               </Dialog>
@@ -136,7 +151,12 @@ export default function Inventory() {
                         <TableCell>{p.minStock}</TableCell>
                         <TableCell>{p.price.toLocaleString()} ₽</TableCell>
                         <TableCell><Badge variant={status.variant as any}>{status.label}</Badge></TableCell>
-                        <TableCell><Button variant="ghost" size="sm" onClick={() => handleDelete(p.id)}>Удалить</Button></TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="sm" onClick={() => editProduct(p)}><Pencil className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="sm" onClick={() => handleDelete(p.id)}><Trash2 className="h-4 w-4" /></Button>
+                          </div>
+                        </TableCell>
                       </TableRow>
                     );
                   })}
