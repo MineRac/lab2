@@ -100,10 +100,6 @@ model DemandPrediction {
   @@index([productId])
 }
 
-//
-// ENUMS
-//
-
 enum OrderStatus {
   PENDING
   CONFIRMED
