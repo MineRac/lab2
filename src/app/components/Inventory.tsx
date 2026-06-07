@@ -14,7 +14,7 @@ import {
   TableRow,
 } from "./ui/table";
 
-import { getInventory } from "../../api/inventory";
+import { getInventory } from "@/api/inventory";
 
 export default function Inventory() {
   const [inventory, setInventory] = useState<any[]>([]);
@@ -61,7 +61,7 @@ export default function Inventory() {
   };
 
   if (loading) {
-    return <div className="p-6 text-slate-500">Загрузка склада...</div>;
+    return <div className="p-6 text-slate-500">Загрузка...</div>;
   }
 
   return (
@@ -73,8 +73,7 @@ export default function Inventory() {
 
           <div className="flex gap-2 mt-4">
             <Input
-              placeholder="Поиск по товару или SKU..."
-              className="pl-10"
+              placeholder="Поиск..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
