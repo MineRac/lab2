@@ -44,7 +44,30 @@ const jwtSecret = process.env.JWT_SECRET ?? 'dev-secret-change-me';
 const distPath = path.resolve(process.cwd(), 'dist');
 const indexHtmlPath = path.join(distPath, 'index.html');
 
-app.use(cors({ origin: process.env.CLIENT_ORIGIN ?? 'http://localhost:5173' }));
+const defaultAllowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:4173',
+  'https://lab2-beryl.vercel.app',
+  'https://lab2-git-main-mineracs-projects.vercel.app',
+  'https://lab2-bny619abz-mineracs-projects.vercel.app'
+];
+
+const allowedOrigins = (process.env.CLIENT_ORIGINS ?? process.env.CLIENT_ORIGIN ?? defaultAllowedOrigins.join(','))
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error(`CORS: origin ${origin} is not allowed`));
+  },
+  credentials: true
+}));
 app.use(express.json());
 
 type AuthRequest = Request & { user?: { id: string; username: string; role: string } };

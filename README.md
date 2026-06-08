@@ -630,3 +630,25 @@ python inventory_rl.py train --timesteps 250000
 - В ML Прогнозах карточка `Точность модели` переименована в `Уверенность прогнозов`, потому что она показывает среднюю confidence из `ml_forecasts`, а не точность автозаказов.
 
 Теперь показатели не конфликтуют между вкладками.
+
+## Vercel domains CORS
+
+Backend CORS теперь разрешает следующие frontend-домены:
+
+```txt
+https://lab2-beryl.vercel.app
+https://lab2-git-main-mineracs-projects.vercel.app
+https://lab2-bny619abz-mineracs-projects.vercel.app
+```
+
+Для production backend можно задать переменную:
+
+```env
+CLIENT_ORIGINS=http://localhost:5173,https://lab2-beryl.vercel.app,https://lab2-git-main-mineracs-projects.vercel.app,https://lab2-bny619abz-mineracs-projects.vercel.app
+```
+
+На Vercel frontend также должен быть задан:
+
+```env
+VITE_API_URL=https://ТВОЙ_BACKEND_ДОМЕН/api
+```
