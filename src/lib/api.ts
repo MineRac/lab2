@@ -1,36 +1,33 @@
-const API_BASE = import.meta.env.VITE_API_BASE || '';
+// src/lib/api.ts
+const API_BASE = '/api';
 
-function getHeaders() {
+async function request<T>(
+  endpoint: string,
+  options?: RequestInit
+): Promise<T> {
   const token = localStorage.getItem('token');
-  return {
+  const headers: HeadersInit = {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
-}
-
-async function handleResponse(res: Response) {
+  const res = await fetch(`${API_BASE}${endpoint}`, {
+    ...options,
+    headers,
+  });
   if (!res.ok) {
-    const error = await res.json().catch(() => ({}));
-    throw new Error(error.message || `HTTP ${res.status}`);
+    const text = await res.text();
+    throw new Error(text || res.statusText);
   }
+  if (res.status === 204) return null as T;
   return res.json();
 }
 
 export const api = {
-  get: <T = any>(url: string): Promise<T> =>
-    fetch(`${API_BASE}${url}`, { headers: getHeaders() }).then(handleResponse),
-  post: <T = any>(url: string, body?: any): Promise<T> =>
-    fetch(`${API_BASE}${url}`, {
-      method: 'POST',
-      headers: getHeaders(),
-      body: body ? JSON.stringify(body) : undefined,
-    }).then(handleResponse),
-  put: <T = any>(url: string, body: any): Promise<T> =>
-    fetch(`${API_BASE}${url}`, {
-      method: 'PUT',
-      headers: getHeaders(),
-      body: JSON.stringify(body),
-    }).then(handleResponse),
-  delete: <T = any>(url: string): Promise<T> =>
-    fetch(`${API_BASE}${url}`, { method: 'DELETE', headers: getHeaders() }).then(handleResponse),
+  get: <T>(endpoint: string) => request<T>(endpoint),
+  post: <T>(endpoint: string, body?: any) =>
+    request<T>(endpoint, { method: 'POST', body: JSON.stringify(body) }),
+  put: <T>(endpoint: string, body?: any) =>
+    request<T>(endpoint, { method: 'PUT', body: JSON.stringify(body) }),
+  delete: <T>(endpoint: string) =>
+    request<T>(endpoint, { method: 'DELETE' }),
 };
