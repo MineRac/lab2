@@ -14,6 +14,9 @@ export default async function handler(req: any, res: any) {
   const path = rawUrl.split('?')[0];
   const method = (req.method || '').toUpperCase();
 
+  // Обязательно устанавливаем Content-Type JSON для всех ответов
+  res.setHeader('Content-Type', 'application/json');
+
   // Обработка CORS preflight (OPTIONS)
   if (method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -108,18 +111,42 @@ export default async function handler(req: any, res: any) {
 //  Публичные обработчики
 // ----------------------------------------------------------------------
 async function handleLogin(req: any, res: any) {
-  if ((req.method || '').toUpperCase() !== 'POST') return res.status(405).end();
-  const { email, password } = req.body;
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (!user || !(await bcrypt.compare(password, user.password))) {
-    return res.status(401).json({ error: 'Invalid credentials' });
+  // Убедимся, что метод POST
+  if ((req.method || '').toUpperCase() !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
-  const token = generateToken(user.id, user.role);
-  res.json({ token, user: { id: user.id, email, name: user.name, role: user.role } });
+
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password required' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { email } });
+
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    const isValid = await bcrypt.compare(password, user.password);
+    if (!isValid) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    const token = generateToken(user.id, user.role);
+    return res.status(200).json({
+      token,
+      user: { id: user.id, email: user.email, name: user.name, role: user.role },
+    });
+  } catch (error: any) {
+    console.error('Login error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
 }
 
 async function handleLogout(req: any, res: any) {
-  res.status(200).json({ message: 'Logged out successfully' });
+  return res.status(200).json({ message: 'Logged out successfully' });
 }
 
 // ----------------------------------------------------------------------
@@ -131,20 +158,18 @@ async function handleMe(req: any, res: any) {
     where: { id: userId },
     select: { id: true, email: true, name: true, role: true },
   });
-  res.json(user);
+  return res.json(user);
 }
 
-// ---------- dashboard ----------
 async function handleDashboardStats(req: any, res: any) {
   const totalProducts = await prisma.product.count();
   const totalValueAgg = await prisma.product.aggregate({ _sum: { price: true } });
   const totalValue = totalValueAgg._sum.price || 0;
   const lowStock = await prisma.product.count({ where: { stock: { lt: 20 } } });
   const mlAccuracy = 94.3;
-  res.json({ totalProducts, totalValue, lowStock, mlAccuracy });
+  return res.json({ totalProducts, totalValue, lowStock, mlAccuracy });
 }
 
-// ---------- analytics ----------
 async function handleCategories(req: any, res: any) {
   const categories = await prisma.product.groupBy({
     by: ['category'],
@@ -155,7 +180,7 @@ async function handleCategories(req: any, res: any) {
     name: c.category,
     value: total ? Math.round(((c._sum.price || 0) / total) * 100) : 0,
   }));
-  res.json(result);
+  return res.json(result);
 }
 
 async function handleOverview(req: any, res: any) {
@@ -168,7 +193,7 @@ async function handleOverview(req: any, res: any) {
   const profit = revenue * 0.3;
   const turnover = 11.2;
   const orderCount = orders.length;
-  res.json({ revenue, profit, turnover, orders: orderCount });
+  return res.json({ revenue, profit, turnover, orders: orderCount });
 }
 
 async function handleRevenue(req: any, res: any) {
@@ -180,7 +205,7 @@ async function handleRevenue(req: any, res: any) {
     const monthName = date.toLocaleString('ru', { month: 'short' });
     result.push({ month: monthName, revenue: 2000000 + Math.random() * 2000000 });
   }
-  res.json(result);
+  return res.json(result);
 }
 
 async function handleSeasonality(req: any, res: any) {
@@ -190,7 +215,7 @@ async function handleSeasonality(req: any, res: any) {
     { month: 'Июл', sales: 4200 }, { month: 'Авг', sales: 3900 }, { month: 'Сен', sales: 5200 },
     { month: 'Окт', sales: 4800 }, { month: 'Ноя', sales: 6100 }, { month: 'Дек', sales: 5800 },
   ];
-  res.json(data);
+  return res.json(data);
 }
 
 async function handleTurnover(req: any, res: any) {
@@ -200,7 +225,7 @@ async function handleTurnover(req: any, res: any) {
   for (let i = 0; i < months; i++) {
     data.push({ month: `Месяц ${i+1}`, quantity: 3000 + Math.random() * 3000 });
   }
-  res.json(data);
+  return res.json(data);
 }
 
 async function handleTurnoverByCategory(req: any, res: any) {
@@ -209,22 +234,19 @@ async function handleTurnoverByCategory(req: any, res: any) {
     category: c.category,
     turnover: Math.random() * 10 + 5,
   }));
-  res.json(result);
+  return res.json(result);
 }
 
 // ---------- predictions ----------
 async function handleDemand(req: any, res: any) {
   const { productId, days = 30 } = req.query;
   const movements = await prisma.stockMovement.findMany({
-    where: {
-      productId: productId as string,
-      type: StockMovementType.OUT,
-    },
+    where: { productId: productId as string, type: StockMovementType.OUT },
     orderBy: { createdAt: 'asc' },
   });
   const sales = movements.map(m => m.quantity);
   const forecast = simpleExponentialSmoothing(sales, Number(days));
-  res.json({ forecast });
+  return res.json({ forecast });
 }
 
 function simpleExponentialSmoothing(data: number[], steps: number, alpha = 0.3) {
@@ -239,16 +261,8 @@ function simpleExponentialSmoothing(data: number[], steps: number, alpha = 0.3) 
 async function handleRestock(req: any, res: any) {
   const allProducts = await prisma.product.findMany();
   const products = allProducts.filter(p => p.stock < p.minStock);
-  const recommendations: Array<{
-    productId: string;
-    productName: string;
-    currentStock: number;
-    recommendedOrder: any;
-    confidence: any;
-  }> = [];
-
+  const recommendations = [];
   const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://localhost:8000';
-
   for (const product of products) {
     try {
       const mlResponse = await fetch(`${ML_SERVICE_URL}/recommend`, {
@@ -274,7 +288,7 @@ async function handleRestock(req: any, res: any) {
       console.error(`ML error for ${product.id}`, err);
     }
   }
-  res.json(recommendations);
+  return res.json(recommendations);
 }
 
 async function getDemandHistory(productId: string, days = 30) {
@@ -295,18 +309,15 @@ async function handleForecast(req: any, res: any) {
   for (let i = 1; i <= weeks; i++) {
     data.push({ week: `Неделя ${i}`, predicted: 800 + Math.random() * 400 });
   }
-  res.json(data);
+  return res.json(data);
 }
 
 async function handleModelInfo(req: any, res: any) {
-  res.json({ accuracy: 94.3, predictionsCount: 2847, avgConfidence: 91.8, savings: 1200000 });
+  return res.json({ accuracy: 94.3, predictionsCount: 2847, avgConfidence: 91.8, savings: 1200000 });
 }
 
 async function handleRestockRecommendations(req: any, res: any) {
-  const products = await prisma.product.findMany({
-    where: { stock: { lt: 50 } },
-    take: 5,
-  });
+  const products = await prisma.product.findMany({ where: { stock: { lt: 50 } }, take: 5 });
   const recommendations = products.map(p => ({
     productId: p.id,
     productName: p.name,
@@ -314,7 +325,7 @@ async function handleRestockRecommendations(req: any, res: any) {
     recommendedOrder: Math.max(0, p.minStock - p.stock + 20),
     confidence: 85 + Math.random() * 10,
   }));
-  res.json(recommendations);
+  return res.json(recommendations);
 }
 
 // ---------- orders ----------
@@ -325,16 +336,16 @@ async function handleOrdersHistory(req: any, res: any) {
     take: 50,
   });
   const enriched = orders.map(o => ({ ...o, confidence: 85 }));
-  res.json(enriched);
+  return res.json(enriched);
 }
 
 // ---------- settings ----------
 async function handleSettings(req: any, res: any) {
   const { enabled, confidenceThreshold } = req.body;
-  res.json({ success: true, enabled, confidenceThreshold });
+  return res.json({ success: true, enabled, confidenceThreshold });
 }
 
-// ---------- products (CRUD + пагинация) ----------
+// ---------- products ----------
 async function handleGetProducts(req: any, res: any) {
   const { search, category, limit = '20', page = '1', sort = 'createdAt:desc' } = req.query;
   const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
@@ -346,39 +357,25 @@ async function handleGetProducts(req: any, res: any) {
     ];
   }
   if (category && category !== 'all') where.category = category as string;
-
   const [data, total] = await Promise.all([
-    prisma.product.findMany({
-      where,
-      skip,
-      take: parseInt(limit as string),
-      orderBy: { [sort.split(':')[0]]: sort.split(':')[1] as any },
-    }),
+    prisma.product.findMany({ where, skip, take: parseInt(limit as string), orderBy: { [sort.split(':')[0]]: sort.split(':')[1] as any } }),
     prisma.product.count({ where }),
   ]);
-  res.json({ data, total, page: parseInt(page as string), limit: parseInt(limit as string) });
+  return res.json({ data, total, page: parseInt(page as string), limit: parseInt(limit as string) });
 }
 
 async function handleCreateProduct(req: any, res: any) {
   const { sku, name, category, price, stock, minStock, location } = req.body;
   const product = await prisma.product.create({
-    data: {
-      sku,
-      name,
-      category,
-      price: parseFloat(price),
-      stock: parseInt(stock),
-      minStock: parseInt(minStock),
-      location,
-    },
+    data: { sku, name, category, price: parseFloat(price), stock: parseInt(stock), minStock: parseInt(minStock), location },
   });
-  res.json(product);
+  return res.json(product);
 }
 
 async function handleGetProductById(req: any, res: any, id: string) {
   const product = await prisma.product.findUnique({ where: { id } });
   if (!product) return res.status(404).json({ error: 'Product not found' });
-  res.json(product);
+  return res.json(product);
 }
 
 async function handleUpdateProduct(req: any, res: any, id: string) {
@@ -386,17 +383,9 @@ async function handleUpdateProduct(req: any, res: any, id: string) {
   try {
     const product = await prisma.product.update({
       where: { id },
-      data: {
-        sku,
-        name,
-        category,
-        price: price !== undefined ? parseFloat(price) : undefined,
-        stock: stock !== undefined ? parseInt(stock) : undefined,
-        minStock: minStock !== undefined ? parseInt(minStock) : undefined,
-        location,
-      },
+      data: { sku, name, category, price: price !== undefined ? parseFloat(price) : undefined, stock: stock !== undefined ? parseInt(stock) : undefined, minStock: minStock !== undefined ? parseInt(minStock) : undefined, location },
     });
-    res.json(product);
+    return res.json(product);
   } catch (error: any) {
     if (error.code === 'P2025') return res.status(404).json({ error: 'Product not found' });
     throw error;
@@ -406,7 +395,7 @@ async function handleUpdateProduct(req: any, res: any, id: string) {
 async function handleDeleteProduct(req: any, res: any, id: string) {
   try {
     await prisma.product.delete({ where: { id } });
-    res.status(204).end();
+    return res.status(204).end();
   } catch (error: any) {
     if (error.code === 'P2025') return res.status(404).json({ error: 'Product not found' });
     throw error;
@@ -416,55 +405,36 @@ async function handleDeleteProduct(req: any, res: any, id: string) {
 // ---------- auto-orders ----------
 async function handleGetAutoOrders(req: any, res: any) {
   const rules = await prisma.autoOrder.findMany({ include: { product: true } });
-  res.json(rules);
+  return res.json(rules);
 }
 
 async function handleCreateAutoOrder(req: any, res: any) {
   const { productId, triggerLevel, orderQuantity } = req.body;
   const rule = await prisma.autoOrder.create({
-    data: {
-      productId: String(productId),
-      triggerLevel: Number(triggerLevel),
-      orderQuantity: Number(orderQuantity),
-      userId: req.user.userId,
-    },
+    data: { productId: String(productId), triggerLevel: Number(triggerLevel), orderQuantity: Number(orderQuantity), userId: req.user.userId },
   });
-  res.json(rule);
+  return res.json(rule);
 }
 
 async function handleRunAutoOrders(req: any, res: any) {
-  const rules = await prisma.autoOrder.findMany({
-    where: { isActive: true },
-    include: { product: true },
-  });
-  const createdOrders: Awaited<ReturnType<typeof prisma.order.create>>[] = [];
+  const rules = await prisma.autoOrder.findMany({ where: { isActive: true }, include: { product: true } });
+  const createdOrders = [];
   for (const rule of rules) {
     if (rule.product.stock <= rule.triggerLevel) {
       const order = await prisma.order.create({
-        data: {
-          productId: rule.productId,
-          quantity: rule.orderQuantity,
-          status: 'PENDING',
-          totalPrice: rule.orderQuantity * rule.product.price,
-        },
+        data: { productId: rule.productId, quantity: rule.orderQuantity, status: 'PENDING', totalPrice: rule.orderQuantity * rule.product.price },
       });
       createdOrders.push(order);
-      await prisma.autoOrder.update({
-        where: { id: rule.id },
-        data: { lastTriggeredAt: new Date() },
-      });
+      await prisma.autoOrder.update({ where: { id: rule.id }, data: { lastTriggeredAt: new Date() } });
     }
   }
-  res.json({ created: createdOrders.length, orders: createdOrders });
+  return res.json({ created: createdOrders.length, orders: createdOrders });
 }
 
 async function handleGetAutoOrderById(req: any, res: any, id: string) {
-  const rule = await prisma.autoOrder.findUnique({
-    where: { id },
-    include: { product: true },
-  });
+  const rule = await prisma.autoOrder.findUnique({ where: { id }, include: { product: true } });
   if (!rule) return res.status(404).json({ error: 'Auto order rule not found' });
-  res.json(rule);
+  return res.json(rule);
 }
 
 async function handleUpdateAutoOrder(req: any, res: any, id: string) {
@@ -472,13 +442,9 @@ async function handleUpdateAutoOrder(req: any, res: any, id: string) {
   try {
     const updated = await prisma.autoOrder.update({
       where: { id },
-      data: {
-        triggerLevel: triggerLevel !== undefined ? Number(triggerLevel) : undefined,
-        orderQuantity: orderQuantity !== undefined ? Number(orderQuantity) : undefined,
-        isActive: isActive !== undefined ? isActive : undefined,
-      },
+      data: { triggerLevel: triggerLevel !== undefined ? Number(triggerLevel) : undefined, orderQuantity: orderQuantity !== undefined ? Number(orderQuantity) : undefined, isActive: isActive !== undefined ? isActive : undefined },
     });
-    res.json(updated);
+    return res.json(updated);
   } catch (error: any) {
     if (error.code === 'P2025') return res.status(404).json({ error: 'Rule not found' });
     throw error;
@@ -488,7 +454,7 @@ async function handleUpdateAutoOrder(req: any, res: any, id: string) {
 async function handleDeleteAutoOrder(req: any, res: any, id: string) {
   try {
     await prisma.autoOrder.delete({ where: { id } });
-    res.status(204).end();
+    return res.status(204).end();
   } catch (error: any) {
     if (error.code === 'P2025') return res.status(404).json({ error: 'Rule not found' });
     throw error;
@@ -497,5 +463,5 @@ async function handleDeleteAutoOrder(req: any, res: any, id: string) {
 
 async function handleAutoOrdersSettings(req: any, res: any) {
   const { enabled, confidenceThreshold } = req.body;
-  res.json({ success: true, enabled, confidenceThreshold });
+  return res.json({ success: true, enabled, confidenceThreshold });
 }
