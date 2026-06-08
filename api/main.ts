@@ -1,6 +1,6 @@
 // api/[...all].ts (или api/rest.ts)
-import { withAuth } from '../../lib/authMiddleware';
-import { prisma } from '../../lib/db';
+import { withAuth } from '../lib/authMiddleware';
+import { prisma } from '../lib/db';
 import { StockMovementType } from '@prisma/client';
 
 export default withAuth(async (req: any, res: any) => {
