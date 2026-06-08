@@ -1,0 +1,21 @@
+
+html, body, #root {
+  min-height: 100%;
+}
+
+body {
+  background:
+    radial-gradient(circle at top left, rgba(59, 130, 246, 0.13), transparent 30%),
+    radial-gradient(circle at top right, rgba(124, 58, 237, 0.10), transparent 26%),
+    linear-gradient(135deg, #e2e8f0 0%, #f1f5f9 42%, #dbeafe 100%);
+  color: #0f172a;
+}
+
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background: rgba(59, 130, 246, 0.18);
+}
