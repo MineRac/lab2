@@ -2,62 +2,110 @@
 import { withAuth } from '../lib/authMiddleware';
 import { prisma } from '../lib/db';
 import { StockMovementType } from '@prisma/client';
+import bcrypt from 'bcryptjs';
+import { generateToken } from '../lib/jwt';      // предположим, что функция generateToken существует
 
 // ----------------------------------------------------------------------
-//  Маршрутизация
+//  Маршрутизация (без авторизации для login/logout)
 // ----------------------------------------------------------------------
-export default withAuth(async (req: any, res: any) => {
+export default async function handler(req: any, res: any) {
   const { url, method } = req;
 
-  // --- analytics ---
-  if (url === '/api/analytics/categories' && method === 'GET') {
-    return handleCategories(req, res);
+  // --- auth (public) ---
+  if (url === '/api/auth/login' && method === 'POST') {
+    return handleLogin(req, res);
   }
-  if (url === '/api/analytics/overview' && method === 'GET') {
-    return handleOverview(req, res);
-  }
-  if (url === '/api/analytics/revenue' && method === 'GET') {
-    return handleRevenue(req, res);
-  }
-  if (url === '/api/analytics/seasonality' && method === 'GET') {
-    return handleSeasonality(req, res);
-  }
-  if (url === '/api/analytics/turnover' && method === 'GET') {
-    return handleTurnover(req, res);
-  }
-  if (url === '/api/analytics/turnover-by-category' && method === 'GET') {
-    return handleTurnoverByCategory(req, res);
+  if (url === '/api/auth/logout' && method === 'POST') {
+    return handleLogout(req, res);
   }
 
-  // --- predictions ---
-  if (url === '/api/predictions/demand' && method === 'GET') {
-    return handleDemand(req, res);
-  }
-  if (url === '/api/predictions/restock' && method === 'GET') {
-    return handleRestock(req, res);
-  }
-  if (url === '/api/predictions/forecast' && method === 'GET') {
-    return handleForecast(req, res);
-  }
+  // --- всё остальное требует авторизации через withAuth ---
+  // Используем withAuth как обёртку для остальных обработчиков
+  return withAuth(async (req: any, res: any) => {
+    const { url, method } = req;
 
-  // --- auto-orders ---
-  if (url === '/api/auto-orders' && method === 'GET') {
-    return handleGetAutoOrders(req, res);
-  }
-  if (url === '/api/auto-orders' && method === 'POST') {
-    return handleCreateAutoOrder(req, res);
-  }
-  if (url === '/api/auto-orders/run' && method === 'POST') {
-    return handleRunAutoOrders(req, res);
-  }
+    // --- auth (protected) ---
+    if (url === '/api/auth/me' && method === 'GET') {
+      return handleMe(req, res);
+    }
 
-  // Не найдено
-  res.status(404).json({ error: 'API endpoint not found' });
-});
+    // --- analytics ---
+    if (url === '/api/analytics/categories' && method === 'GET') {
+      return handleCategories(req, res);
+    }
+    if (url === '/api/analytics/overview' && method === 'GET') {
+      return handleOverview(req, res);
+    }
+    if (url === '/api/analytics/revenue' && method === 'GET') {
+      return handleRevenue(req, res);
+    }
+    if (url === '/api/analytics/seasonality' && method === 'GET') {
+      return handleSeasonality(req, res);
+    }
+    if (url === '/api/analytics/turnover' && method === 'GET') {
+      return handleTurnover(req, res);
+    }
+    if (url === '/api/analytics/turnover-by-category' && method === 'GET') {
+      return handleTurnoverByCategory(req, res);
+    }
+
+    // --- predictions ---
+    if (url === '/api/predictions/demand' && method === 'GET') {
+      return handleDemand(req, res);
+    }
+    if (url === '/api/predictions/restock' && method === 'GET') {
+      return handleRestock(req, res);
+    }
+    if (url === '/api/predictions/forecast' && method === 'GET') {
+      return handleForecast(req, res);
+    }
+
+    // --- auto-orders ---
+    if (url === '/api/auto-orders' && method === 'GET') {
+      return handleGetAutoOrders(req, res);
+    }
+    if (url === '/api/auto-orders' && method === 'POST') {
+      return handleCreateAutoOrder(req, res);
+    }
+    if (url === '/api/auto-orders/run' && method === 'POST') {
+      return handleRunAutoOrders(req, res);
+    }
+
+    res.status(404).json({ error: 'API endpoint not found' });
+  })(req, res);
+}
 
 // ----------------------------------------------------------------------
-//  Обработчики
+//  Обработчики (login/logout без авторизации)
 // ----------------------------------------------------------------------
+async function handleLogin(req: any, res: any) {
+  if (req.method !== 'POST') return res.status(405).end();
+  const { email, password } = req.body;
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user || !(await bcrypt.compare(password, user.password))) {
+    return res.status(401).json({ error: 'Invalid credentials' });
+  }
+  const token = generateToken(user.id, user.role);
+  res.json({ token, user: { id: user.id, email, name: user.name, role: user.role } });
+}
+
+async function handleLogout(req: any, res: any) {
+  // На стороне клиента нужно удалить токен. Серверной логики обычно не требуется.
+  // Можно добавить чёрный список, если необходимо.
+  res.status(200).json({ message: 'Logged out successfully' });
+}
+
+// ----------------------------------------------------------------------
+//  Обработчики (требуют авторизацию, вызываются внутри withAuth)
+// ----------------------------------------------------------------------
+async function handleMe(req: any, res: any) {
+  const userId = req.user.userId;  // предположим, что withAuth кладёт userId в req.user
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, email: true, name: true, role: true },
+  });
+  res.json(user);
+}
 
 // ---------- analytics ----------
 async function handleCategories(req: any, res: any) {
@@ -80,8 +128,8 @@ async function handleOverview(req: any, res: any) {
     where: { orderedAt: { gte: startDate } },
   });
   const revenue = orders.reduce((sum, o) => sum + (o.totalPrice || 0), 0);
-  const profit = revenue * 0.3; // демо
-  const turnover = 11.2; // демо
+  const profit = revenue * 0.3;
+  const turnover = 11.2;
   const orderCount = orders.length;
   res.json({ revenue, profit, turnover, orders: orderCount });
 }
@@ -93,7 +141,6 @@ async function handleRevenue(req: any, res: any) {
   for (let i = months - 1; i >= 0; i--) {
     const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const monthName = date.toLocaleString('ru', { month: 'short' });
-    // демо-данные, замените на реальную агрегацию
     result.push({ month: monthName, revenue: 2000000 + Math.random() * 2000000 });
   }
   res.json(result);
@@ -227,7 +274,7 @@ async function handleCreateAutoOrder(req: any, res: any) {
       productId: String(productId),
       triggerLevel: Number(triggerLevel),
       orderQuantity: Number(orderQuantity),
-      userId: req.user.id, // обязательно, получаем из аутентификации
+      userId: req.user.userId, // используем поле userId из токена (обычно req.user.id или req.user.userId)
     },
   });
   res.json(rule);
