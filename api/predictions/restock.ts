@@ -1,23 +1,21 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiRequest, NextApiResponse } from 'next'; // исправлено: импорт типов
 import { withAuth } from '../../lib/authMiddleware';
 import { prisma } from '../../lib/db';
-import { StockMovementType } from '@prisma/client'; // импорт enum
+import { StockMovementType } from '@prisma/client';
 
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://localhost:8000';
 
 export default withAuth(async (req: NextApiRequest, res: NextApiResponse) => {
-  // Получаем все товары с низким запасом
   const products = await prisma.product.findMany({
-    where: { stock: { lt: prisma.product.fields.minStock } }, // возможно, ошибка: fields.minStock? обычно просто minStock
+    where: { stock: { lt: prisma.product.fields.minStock } },
   });
 
-  // ✅ Явно указываем тип массива
   const recommendations: Array<{
     productId: string;
     productName: string;
     currentStock: number;
-    recommendedOrder: any;   // замените на number, если ML возвращает число
-    confidence: any;         // замените на number
+    recommendedOrder: any;
+    confidence: any;
   }> = [];
 
   for (const product of products) {
@@ -52,7 +50,7 @@ async function getDemandHistory(productId: string, days = 30) {
   const movements = await prisma.stockMovement.findMany({
     where: {
       productId,
-      type: StockMovementType.OUTBOUND,  // ✅ используем enum
+      type: StockMovementType.OUT, // ✅ исправлено: OUT, а не OUTBOUND
       createdAt: { gte: new Date(Date.now() - days * 86400000) },
     },
     orderBy: { createdAt: 'asc' },
