@@ -1,15 +1,25 @@
+import type { NextApiRequest, NextApiResponse } from 'next';
 import { withAuth } from '../../lib/authMiddleware';
 import { prisma } from '../../lib/db';
+import { StockMovementType } from '@prisma/client'; // импорт enum
 
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://localhost:8000';
 
-export default withAuth(async (req, res) => {
+export default withAuth(async (req: NextApiRequest, res: NextApiResponse) => {
   // Получаем все товары с низким запасом
   const products = await prisma.product.findMany({
-    where: { stock: { lt: prisma.product.fields.minStock } },
+    where: { stock: { lt: prisma.product.fields.minStock } }, // возможно, ошибка: fields.minStock? обычно просто minStock
   });
-  // Для каждого товара запрашиваем у ML‑модели оптимальный заказ
-  const recommendations = [];
+
+  // ✅ Явно указываем тип массива
+  const recommendations: Array<{
+    productId: string;
+    productName: string;
+    currentStock: number;
+    recommendedOrder: any;   // замените на number, если ML возвращает число
+    confidence: any;         // замените на number
+  }> = [];
+
   for (const product of products) {
     try {
       const mlResponse = await fetch(`${ML_SERVICE_URL}/recommend`, {
@@ -20,7 +30,7 @@ export default withAuth(async (req, res) => {
           current_stock: product.stock,
           min_stock: product.minStock,
           max_stock: product.maxStock,
-          history: await getDemandHistory(product.id), // функция получает последние продажи
+          history: await getDemandHistory(product.id),
         }),
       });
       const mlData = await mlResponse.json();
@@ -40,7 +50,11 @@ export default withAuth(async (req, res) => {
 
 async function getDemandHistory(productId: string, days = 30) {
   const movements = await prisma.stockMovement.findMany({
-    where: { productId, type: 'OUTBOUND', createdAt: { gte: new Date(Date.now() - days * 86400000) } },
+    where: {
+      productId,
+      type: StockMovementType.OUTBOUND,  // ✅ используем enum
+      createdAt: { gte: new Date(Date.now() - days * 86400000) },
+    },
     orderBy: { createdAt: 'asc' },
   });
   return movements.map(m => m.quantity);
