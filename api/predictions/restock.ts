@@ -1,14 +1,14 @@
-import type { NextApiRequest, NextApiResponse } from 'next'; // исправлено: импорт типов
 import { withAuth } from '../../lib/authMiddleware';
 import { prisma } from '../../lib/db';
 import { StockMovementType } from '@prisma/client';
 
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://localhost:8000';
 
-export default withAuth(async (req: NextApiRequest, res: NextApiResponse) => {
-  const products = await prisma.product.findMany({
-    where: { stock: { lt: prisma.product.fields.minStock } },
-  });
+export default withAuth(async (req: any, res: any) => {
+  // Получаем все продукты (или только те, у которых stock < minStock)
+  // Prisma не позволяет сравнивать два поля в where, поэтому получаем все и фильтруем
+  const allProducts = await prisma.product.findMany();
+  const products = allProducts.filter(p => p.stock < p.minStock);
 
   const recommendations: Array<{
     productId: string;
@@ -50,7 +50,7 @@ async function getDemandHistory(productId: string, days = 30) {
   const movements = await prisma.stockMovement.findMany({
     where: {
       productId,
-      type: StockMovementType.OUT, // ✅ исправлено: OUT, а не OUTBOUND
+      type: StockMovementType.OUT,
       createdAt: { gte: new Date(Date.now() - days * 86400000) },
     },
     orderBy: { createdAt: 'asc' },
