@@ -3,10 +3,10 @@ import { withAuth } from '../lib/authMiddleware';
 import { prisma } from '../lib/db';
 import { StockMovementType } from '@prisma/client';
 import bcrypt from 'bcryptjs';
-import { generateToken } from '../lib/jwt';      // предположим, что функция generateToken существует
+import { generateToken } from '../lib/jwt';
 
 // ----------------------------------------------------------------------
-//  Маршрутизация (без авторизации для login/logout)
+//  Маршрутизация (публичные эндпоинты)
 // ----------------------------------------------------------------------
 export default async function handler(req: any, res: any) {
   const { url, method } = req;
@@ -19,8 +19,7 @@ export default async function handler(req: any, res: any) {
     return handleLogout(req, res);
   }
 
-  // --- всё остальное требует авторизации через withAuth ---
-  // Используем withAuth как обёртку для остальных обработчиков
+  // --- всё остальное требует авторизации ---
   return withAuth(async (req: any, res: any) => {
     const { url, method } = req;
 
@@ -60,7 +59,17 @@ export default async function handler(req: any, res: any) {
       return handleForecast(req, res);
     }
 
-    // --- auto-orders ---
+    // --- orders ---
+    if (url === '/api/orders/history' && method === 'GET') {
+      return handleOrdersHistory(req, res);
+    }
+
+    // --- settings ---
+    if (url === '/api/settings' && method === 'POST') {
+      return handleSettings(req, res);
+    }
+
+    // --- auto-orders (коллекция) ---
     if (url === '/api/auto-orders' && method === 'GET') {
       return handleGetAutoOrders(req, res);
     }
@@ -71,12 +80,28 @@ export default async function handler(req: any, res: any) {
       return handleRunAutoOrders(req, res);
     }
 
+    // --- auto-orders (один элемент) ---
+    // URL вида /api/auto-orders/123
+    const match = url.match(/^\/api\/auto-orders\/([^\/]+)$/);
+    if (match) {
+      const id = match[1];
+      if (method === 'GET') {
+        return handleGetAutoOrderById(req, res, id);
+      }
+      if (method === 'PUT') {
+        return handleUpdateAutoOrder(req, res, id);
+      }
+      if (method === 'DELETE') {
+        return handleDeleteAutoOrder(req, res, id);
+      }
+    }
+
     res.status(404).json({ error: 'API endpoint not found' });
   })(req, res);
 }
 
 // ----------------------------------------------------------------------
-//  Обработчики (login/logout без авторизации)
+//  Публичные обработчики (login / logout)
 // ----------------------------------------------------------------------
 async function handleLogin(req: any, res: any) {
   if (req.method !== 'POST') return res.status(405).end();
@@ -90,16 +115,15 @@ async function handleLogin(req: any, res: any) {
 }
 
 async function handleLogout(req: any, res: any) {
-  // На стороне клиента нужно удалить токен. Серверной логики обычно не требуется.
-  // Можно добавить чёрный список, если необходимо.
+  // Клиент сам удаляет токен; можно добавить чёрный список, но для простоты:
   res.status(200).json({ message: 'Logged out successfully' });
 }
 
 // ----------------------------------------------------------------------
-//  Обработчики (требуют авторизацию, вызываются внутри withAuth)
+//  Защищённые обработчики (withAuth)
 // ----------------------------------------------------------------------
 async function handleMe(req: any, res: any) {
-  const userId = req.user.userId;  // предположим, что withAuth кладёт userId в req.user
+  const userId = req.user.userId; // предположим, что withAuth кладёт userId в req.user
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { id: true, email: true, name: true, role: true },
@@ -261,7 +285,26 @@ async function handleForecast(req: any, res: any) {
   res.json(data);
 }
 
-// ---------- auto-orders ----------
+// ---------- orders ----------
+async function handleOrdersHistory(req: any, res: any) {
+  const orders = await prisma.order.findMany({
+    include: { product: true },
+    orderBy: { orderedAt: 'desc' },
+    take: 50,
+  });
+  const enriched = orders.map(o => ({ ...o, confidence: 85 }));
+  res.json(enriched);
+}
+
+// ---------- settings ----------
+async function handleSettings(req: any, res: any) {
+  const { enabled, confidenceThreshold } = req.body;
+  // Здесь можно сохранить в базу данных, например, в таблицу Setting
+  // Пока просто возвращаем успех
+  res.json({ success: true, enabled, confidenceThreshold });
+}
+
+// ---------- auto-orders (коллекция) ----------
 async function handleGetAutoOrders(req: any, res: any) {
   const rules = await prisma.autoOrder.findMany({ include: { product: true } });
   res.json(rules);
@@ -274,7 +317,7 @@ async function handleCreateAutoOrder(req: any, res: any) {
       productId: String(productId),
       triggerLevel: Number(triggerLevel),
       orderQuantity: Number(orderQuantity),
-      userId: req.user.userId, // используем поле userId из токена (обычно req.user.id или req.user.userId)
+      userId: req.user.userId, // используем userId из req.user
     },
   });
   res.json(rule);
@@ -304,4 +347,42 @@ async function handleRunAutoOrders(req: any, res: any) {
     }
   }
   res.json({ created: createdOrders.length, orders: createdOrders });
+}
+
+// ---------- auto-orders (один элемент) ----------
+async function handleGetAutoOrderById(req: any, res: any, id: string) {
+  const rule = await prisma.autoOrder.findUnique({
+    where: { id },
+    include: { product: true },
+  });
+  if (!rule) return res.status(404).json({ error: 'Auto order rule not found' });
+  res.json(rule);
+}
+
+async function handleUpdateAutoOrder(req: any, res: any, id: string) {
+  const { triggerLevel, orderQuantity, isActive } = req.body;
+  try {
+    const updated = await prisma.autoOrder.update({
+      where: { id },
+      data: {
+        triggerLevel: triggerLevel !== undefined ? Number(triggerLevel) : undefined,
+        orderQuantity: orderQuantity !== undefined ? Number(orderQuantity) : undefined,
+        isActive: isActive !== undefined ? isActive : undefined,
+      },
+    });
+    res.json(updated);
+  } catch (error: any) {
+    if (error.code === 'P2025') return res.status(404).json({ error: 'Rule not found' });
+    throw error;
+  }
+}
+
+async function handleDeleteAutoOrder(req: any, res: any, id: string) {
+  try {
+    await prisma.autoOrder.delete({ where: { id } });
+    res.status(204).end();
+  } catch (error: any) {
+    if (error.code === 'P2025') return res.status(404).json({ error: 'Rule not found' });
+    throw error;
+  }
 }
