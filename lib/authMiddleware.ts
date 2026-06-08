@@ -1,19 +1,20 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { verifyToken } from './jwt';
 
 export function withAuth(handler: Function) {
-  return async (req: VercelRequest, res: VercelResponse) => {
+  return async (req: any, res: any) => {
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Unauthorized' });
+    const token = authHeader?.split(' ')[1];
+
+    if (!token) {
+      return res.status(401).json({ error: 'Unauthorized: no token' });
     }
-    const token = authHeader.slice(7);
+
     try {
-      const payload = verifyToken(token);
-      (req as any).user = payload;
+      const decoded = verifyToken(token);
+      req.user = decoded; // { userId, role }
       return handler(req, res);
-    } catch {
-      return res.status(401).json({ error: 'Invalid token' });
+    } catch (err) {
+      return res.status(401).json({ error: 'Unauthorized: invalid token' });
     }
   };
 }
