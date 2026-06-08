@@ -24,6 +24,9 @@ export default async function handler(req: any, res: any) {
     // --- auth ---
     if (url === '/api/auth/me' && method === 'GET') return handleMe(req, res);
 
+    // --- dashboard ---
+    if (url === '/api/dashboard/stats' && method === 'GET') return handleDashboardStats(req, res);
+
     // --- analytics ---
     if (url === '/api/analytics/categories' && method === 'GET') return handleCategories(req, res);
     if (url === '/api/analytics/overview' && method === 'GET') return handleOverview(req, res);
@@ -34,13 +37,10 @@ export default async function handler(req: any, res: any) {
 
     // --- predictions ---
     if (url === '/api/predictions/demand' && method === 'GET') return handleDemand(req, res);
-    if (url === '/api/predictions/forecast' && method === 'GET') return handleForecast(req, res);
     if (url === '/api/predictions/restock' && method === 'GET') return handleRestock(req, res);
-    if (url === '/api/predictions/restock-recommendations' && method === 'GET') return handleRestockRecommendations(req, res);
+    if (url === '/api/predictions/forecast' && method === 'GET') return handleForecast(req, res);
     if (url === '/api/predictions/model-info' && method === 'GET') return handleModelInfo(req, res);
-
-    // --- dashboard ---
-    if (url === '/api/dashboard/stats' && method === 'GET') return handleDashboardStats(req, res);
+    if (url === '/api/predictions/restock-recommendations' && method === 'GET') return handleRestockRecommendations(req, res);
 
     // --- orders ---
     if (url === '/api/orders/history' && method === 'GET') return handleOrdersHistory(req, res);
@@ -48,13 +48,9 @@ export default async function handler(req: any, res: any) {
     // --- settings ---
     if (url === '/api/settings' && method === 'POST') return handleSettings(req, res);
 
-    // --- inventory ---
-    if (url === '/api/inventory/stock' && method === 'GET') return handleInventoryStock(req, res);
-
-    // --- products ---
+    // --- products (полноценный CRUD + пагинация) ---
     if (url === '/api/products' && method === 'GET') return handleGetProducts(req, res);
     if (url === '/api/products' && method === 'POST') return handleCreateProduct(req, res);
-
     const productMatch = url.match(/^\/api\/products\/([^\/]+)$/);
     if (productMatch) {
       const id = productMatch[1];
@@ -63,11 +59,23 @@ export default async function handler(req: any, res: any) {
       if (method === 'DELETE') return handleDeleteProduct(req, res, id);
     }
 
+    // --- inventory (алиас для products – чтобы фронт работал как есть) ---
+    if (url === '/api/inventory' && method === 'GET') return handleGetProducts(req, res);
+    if (url === '/api/inventory' && method === 'POST') return handleCreateProduct(req, res);
+    const invMatch = url.match(/^\/api\/inventory\/([^\/]+)$/);
+    if (invMatch) {
+      const id = invMatch[1];
+      if (method === 'GET') return handleGetProductById(req, res, id);
+      if (method === 'PUT') return handleUpdateProduct(req, res, id);
+      if (method === 'DELETE') return handleDeleteProduct(req, res, id);
+    }
+
     // --- auto-orders ---
+    if (url === '/api/auto-orders/history' && method === 'GET') return handleOrdersHistory(req, res);
+    if (url === '/api/auto-orders/settings' && method === 'POST') return handleAutoOrdersSettings(req, res);
     if (url === '/api/auto-orders' && method === 'GET') return handleGetAutoOrders(req, res);
     if (url === '/api/auto-orders' && method === 'POST') return handleCreateAutoOrder(req, res);
     if (url === '/api/auto-orders/run' && method === 'POST') return handleRunAutoOrders(req, res);
-
     const autoOrderMatch = url.match(/^\/api\/auto-orders\/([^\/]+)$/);
     if (autoOrderMatch) {
       const id = autoOrderMatch[1];
@@ -81,7 +89,7 @@ export default async function handler(req: any, res: any) {
 }
 
 // ----------------------------------------------------------------------
-//  Публичные обработчики (login, logout)
+//  Публичные обработчики
 // ----------------------------------------------------------------------
 async function handleLogin(req: any, res: any) {
   if (req.method !== 'POST') return res.status(405).end();
@@ -108,6 +116,16 @@ async function handleMe(req: any, res: any) {
     select: { id: true, email: true, name: true, role: true },
   });
   res.json(user);
+}
+
+// ---------- dashboard ----------
+async function handleDashboardStats(req: any, res: any) {
+  const totalProducts = await prisma.product.count();
+  const totalValueAgg = await prisma.product.aggregate({ _sum: { price: true } });
+  const totalValue = totalValueAgg._sum.price || 0;
+  const lowStock = await prisma.product.count({ where: { stock: { lt: 20 } } });
+  const mlAccuracy = 94.3;
+  res.json({ totalProducts, totalValue, lowStock, mlAccuracy });
 }
 
 // ---------- analytics ----------
@@ -202,15 +220,6 @@ function simpleExponentialSmoothing(data: number[], steps: number, alpha = 0.3) 
   return new Array(steps).fill(last);
 }
 
-async function handleForecast(req: any, res: any) {
-  const weeks = parseInt(req.query.weeks as string) || 8;
-  const data: { week: string; predicted: number }[] = [];
-  for (let i = 1; i <= weeks; i++) {
-    data.push({ week: `Неделя ${i}`, predicted: 800 + Math.random() * 400 });
-  }
-  res.json(data);
-}
-
 async function handleRestock(req: any, res: any) {
   const allProducts = await prisma.product.findMany();
   const products = allProducts.filter(p => p.stock < p.minStock);
@@ -264,6 +273,19 @@ async function getDemandHistory(productId: string, days = 30) {
   return movements.map(m => m.quantity);
 }
 
+async function handleForecast(req: any, res: any) {
+  const weeks = parseInt(req.query.weeks as string) || 8;
+  const data: { week: string; predicted: number }[] = [];
+  for (let i = 1; i <= weeks; i++) {
+    data.push({ week: `Неделя ${i}`, predicted: 800 + Math.random() * 400 });
+  }
+  res.json(data);
+}
+
+async function handleModelInfo(req: any, res: any) {
+  res.json({ accuracy: 94.3, predictionsCount: 2847, avgConfidence: 91.8, savings: 1200000 });
+}
+
 async function handleRestockRecommendations(req: any, res: any) {
   const products = await prisma.product.findMany({
     where: { stock: { lt: 50 } },
@@ -277,20 +299,6 @@ async function handleRestockRecommendations(req: any, res: any) {
     confidence: 85 + Math.random() * 10,
   }));
   res.json(recommendations);
-}
-
-async function handleModelInfo(req: any, res: any) {
-  res.json({ accuracy: 94.3, predictionsCount: 2847, avgConfidence: 91.8, savings: 1200000 });
-}
-
-// ---------- dashboard ----------
-async function handleDashboardStats(req: any, res: any) {
-  const totalProducts = await prisma.product.count();
-  const totalValueAgg = await prisma.product.aggregate({ _sum: { price: true } });
-  const totalValue = totalValueAgg._sum.price || 0;
-  const lowStock = await prisma.product.count({ where: { stock: { lt: 20 } } });
-  const mlAccuracy = 94.3;
-  res.json({ totalProducts, totalValue, lowStock, mlAccuracy });
 }
 
 // ---------- orders ----------
@@ -310,15 +318,7 @@ async function handleSettings(req: any, res: any) {
   res.json({ success: true, enabled, confidenceThreshold });
 }
 
-// ---------- inventory ----------
-async function handleInventoryStock(req: any, res: any) {
-  const products = await prisma.product.findMany({
-    select: { id: true, sku: true, name: true, stock: true, minStock: true, maxStock: true, location: true },
-  });
-  res.json(products);
-}
-
-// ---------- products ----------
+// ---------- products (CRUD + пагинация) ----------
 async function handleGetProducts(req: any, res: any) {
   const { search, category, limit = '20', page = '1', sort = 'createdAt:desc' } = req.query;
   const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
@@ -477,4 +477,10 @@ async function handleDeleteAutoOrder(req: any, res: any, id: string) {
     if (error.code === 'P2025') return res.status(404).json({ error: 'Rule not found' });
     throw error;
   }
+}
+
+async function handleAutoOrdersSettings(req: any, res: any) {
+  const { enabled, confidenceThreshold } = req.body;
+  // Здесь можно сохранить в таблицу настроек, но для демо просто возвращаем успех
+  res.json({ success: true, enabled, confidenceThreshold });
 }
