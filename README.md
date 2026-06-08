@@ -652,3 +652,32 @@ CLIENT_ORIGINS=http://localhost:5173,https://lab2-beryl.vercel.app,https://lab2-
 ```env
 VITE_API_URL=https://ТВОЙ_BACKEND_ДОМЕН/api
 ```
+
+
+## Vercel-only backend
+
+Проект переделан так, чтобы backend API работал прямо на Vercel через Serverless Function:
+
+```txt
+api/[...path].ts
+server/app.ts
+```
+
+Теперь frontend может обращаться к API по относительному адресу:
+
+```env
+VITE_API_URL=/api
+```
+
+На Vercel нужно добавить переменные окружения:
+
+```env
+VITE_API_URL=/api
+SUPABASE_URL=...
+SUPABASE_SERVICE_ROLE_KEY=...
+SUPABASE_ANON_KEY=...
+JWT_SECRET=любой-длинный-секрет
+CLIENT_ORIGINS=https://lab2-beryl.vercel.app,https://lab2-git-main-mineracs-projects.vercel.app,https://lab2-bny619abz-mineracs-projects.vercel.app
+```
+
+ML-сервис на Vercel не запускается как отдельный Python-процесс. Автозаказы будут работать через backend fallback-логику, если `ML_SERVICE_URL` не задан или недоступен.

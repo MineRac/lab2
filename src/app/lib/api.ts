@@ -144,7 +144,7 @@ export interface MlForecast {
   createdAt: string;
 }
 
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000/api';
+const API_URL = import.meta.env.VITE_API_URL ?? '/api';
 const TOKEN_KEY = 'inventory.auth.token';
 const USER_KEY = 'inventory.auth.user';
 
