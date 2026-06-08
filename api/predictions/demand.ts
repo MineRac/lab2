@@ -1,15 +1,17 @@
+import type { NextApiRequest, NextApiResponse } from 'next';
 import { withAuth } from '../../lib/authMiddleware';
 import { prisma } from '../../lib/db';
+import { StockMovementType } from '@prisma/client'; // импорт enum
 
-export default withAuth(async (req, res) => {
+export default withAuth(async (req: NextApiRequest, res: NextApiResponse) => {
   const { productId, days = 30 } = req.query;
   // Получаем историю продаж за последние 90 дней
   const movements = await prisma.stockMovement.findMany({
-    where: { productId: productId as string, type: 'OUTBOUND' },
+    where: { productId: productId as string, type: StockMovementType.OUTBOUND }, // используем enum
     orderBy: { createdAt: 'asc' },
   });
   const sales = movements.map(m => m.quantity); // дневные продажи
-  const forecast = simpleExponentialSmoothing(sales, days);
+  const forecast = simpleExponentialSmoothing(sales, Number(days));
   res.json({ forecast });
 });
 
