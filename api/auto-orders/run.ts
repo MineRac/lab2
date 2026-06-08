@@ -1,14 +1,12 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
 import { withAuth } from '../../lib/authMiddleware';
 import { prisma } from '../../lib/db';
 
-export default withAuth(async (req: NextApiRequest, res: NextApiResponse) => {
-  const rules = await prisma.autoOrder.findMany({ 
-    where: { isActive: true }, 
-    include: { product: true } 
+export default withAuth(async (req: any, res: any) => {
+  const rules = await prisma.autoOrder.findMany({
+    where: { isActive: true },
+    include: { product: true }
   });
 
-  // ✅ Явно указываем тип массива
   const createdOrders: Awaited<ReturnType<typeof prisma.order.create>>[] = [];
 
   for (const rule of rules) {
@@ -22,9 +20,9 @@ export default withAuth(async (req: NextApiRequest, res: NextApiResponse) => {
         },
       });
       createdOrders.push(order);
-      await prisma.autoOrder.update({ 
-        where: { id: rule.id }, 
-        data: { lastTriggeredAt: new Date() } 
+      await prisma.autoOrder.update({
+        where: { id: rule.id },
+        data: { lastTriggeredAt: new Date() }
       });
     }
   }
