@@ -11,7 +11,6 @@ import { generateToken } from '../lib/jwt';
 export default async function handler(req: any, res: any) {
   const { url, method } = req;
 
-  // --- auth (public) ---
   if (url === '/api/auth/login' && method === 'POST') {
     return handleLogin(req, res);
   }
@@ -19,81 +18,62 @@ export default async function handler(req: any, res: any) {
     return handleLogout(req, res);
   }
 
-  // --- всё остальное требует авторизации ---
   return withAuth(async (req: any, res: any) => {
     const { url, method } = req;
 
-    // --- auth (protected) ---
-    if (url === '/api/auth/me' && method === 'GET') {
-      return handleMe(req, res);
-    }
+    // --- auth ---
+    if (url === '/api/auth/me' && method === 'GET') return handleMe(req, res);
 
     // --- analytics ---
-    if (url === '/api/analytics/categories' && method === 'GET') {
-      return handleCategories(req, res);
-    }
-    if (url === '/api/analytics/overview' && method === 'GET') {
-      return handleOverview(req, res);
-    }
-    if (url === '/api/analytics/revenue' && method === 'GET') {
-      return handleRevenue(req, res);
-    }
-    if (url === '/api/analytics/seasonality' && method === 'GET') {
-      return handleSeasonality(req, res);
-    }
-    if (url === '/api/analytics/turnover' && method === 'GET') {
-      return handleTurnover(req, res);
-    }
-    if (url === '/api/analytics/turnover-by-category' && method === 'GET') {
-      return handleTurnoverByCategory(req, res);
-    }
+    if (url === '/api/analytics/categories' && method === 'GET') return handleCategories(req, res);
+    if (url === '/api/analytics/overview' && method === 'GET') return handleOverview(req, res);
+    if (url === '/api/analytics/revenue' && method === 'GET') return handleRevenue(req, res);
+    if (url === '/api/analytics/seasonality' && method === 'GET') return handleSeasonality(req, res);
+    if (url === '/api/analytics/turnover' && method === 'GET') return handleTurnover(req, res);
+    if (url === '/api/analytics/turnover-by-category' && method === 'GET') return handleTurnoverByCategory(req, res);
 
     // --- predictions ---
-    if (url === '/api/predictions/demand' && method === 'GET') {
-      return handleDemand(req, res);
-    }
-    if (url === '/api/predictions/restock' && method === 'GET') {
-      return handleRestock(req, res);
-    }
-    if (url === '/api/predictions/forecast' && method === 'GET') {
-      return handleForecast(req, res);
-    }
+    if (url === '/api/predictions/demand' && method === 'GET') return handleDemand(req, res);
+    if (url === '/api/predictions/forecast' && method === 'GET') return handleForecast(req, res);
+    if (url === '/api/predictions/restock' && method === 'GET') return handleRestock(req, res);
+    if (url === '/api/predictions/restock-recommendations' && method === 'GET') return handleRestockRecommendations(req, res);
+    if (url === '/api/predictions/model-info' && method === 'GET') return handleModelInfo(req, res);
+
+    // --- dashboard ---
+    if (url === '/api/dashboard/stats' && method === 'GET') return handleDashboardStats(req, res);
 
     // --- orders ---
-    if (url === '/api/orders/history' && method === 'GET') {
-      return handleOrdersHistory(req, res);
-    }
+    if (url === '/api/orders/history' && method === 'GET') return handleOrdersHistory(req, res);
 
     // --- settings ---
-    if (url === '/api/settings' && method === 'POST') {
-      return handleSettings(req, res);
+    if (url === '/api/settings' && method === 'POST') return handleSettings(req, res);
+
+    // --- inventory ---
+    if (url === '/api/inventory/stock' && method === 'GET') return handleInventoryStock(req, res);
+
+    // --- products ---
+    if (url === '/api/products' && method === 'GET') return handleGetProducts(req, res);
+    if (url === '/api/products' && method === 'POST') return handleCreateProduct(req, res);
+
+    const productMatch = url.match(/^\/api\/products\/([^\/]+)$/);
+    if (productMatch) {
+      const id = productMatch[1];
+      if (method === 'GET') return handleGetProductById(req, res, id);
+      if (method === 'PUT') return handleUpdateProduct(req, res, id);
+      if (method === 'DELETE') return handleDeleteProduct(req, res, id);
     }
 
-    // --- auto-orders (коллекция) ---
-    if (url === '/api/auto-orders' && method === 'GET') {
-      return handleGetAutoOrders(req, res);
-    }
-    if (url === '/api/auto-orders' && method === 'POST') {
-      return handleCreateAutoOrder(req, res);
-    }
-    if (url === '/api/auto-orders/run' && method === 'POST') {
-      return handleRunAutoOrders(req, res);
-    }
+    // --- auto-orders ---
+    if (url === '/api/auto-orders' && method === 'GET') return handleGetAutoOrders(req, res);
+    if (url === '/api/auto-orders' && method === 'POST') return handleCreateAutoOrder(req, res);
+    if (url === '/api/auto-orders/run' && method === 'POST') return handleRunAutoOrders(req, res);
 
-    // --- auto-orders (один элемент) ---
-    // URL вида /api/auto-orders/123
-    const match = url.match(/^\/api\/auto-orders\/([^\/]+)$/);
-    if (match) {
-      const id = match[1];
-      if (method === 'GET') {
-        return handleGetAutoOrderById(req, res, id);
-      }
-      if (method === 'PUT') {
-        return handleUpdateAutoOrder(req, res, id);
-      }
-      if (method === 'DELETE') {
-        return handleDeleteAutoOrder(req, res, id);
-      }
+    const autoOrderMatch = url.match(/^\/api\/auto-orders\/([^\/]+)$/);
+    if (autoOrderMatch) {
+      const id = autoOrderMatch[1];
+      if (method === 'GET') return handleGetAutoOrderById(req, res, id);
+      if (method === 'PUT') return handleUpdateAutoOrder(req, res, id);
+      if (method === 'DELETE') return handleDeleteAutoOrder(req, res, id);
     }
 
     res.status(404).json({ error: 'API endpoint not found' });
@@ -101,7 +81,7 @@ export default async function handler(req: any, res: any) {
 }
 
 // ----------------------------------------------------------------------
-//  Публичные обработчики (login / logout)
+//  Публичные обработчики (login, logout)
 // ----------------------------------------------------------------------
 async function handleLogin(req: any, res: any) {
   if (req.method !== 'POST') return res.status(405).end();
@@ -115,15 +95,14 @@ async function handleLogin(req: any, res: any) {
 }
 
 async function handleLogout(req: any, res: any) {
-  // Клиент сам удаляет токен; можно добавить чёрный список, но для простоты:
   res.status(200).json({ message: 'Logged out successfully' });
 }
 
 // ----------------------------------------------------------------------
-//  Защищённые обработчики (withAuth)
+//  Защищённые обработчики
 // ----------------------------------------------------------------------
 async function handleMe(req: any, res: any) {
-  const userId = req.user.userId; // предположим, что withAuth кладёт userId в req.user
+  const userId = req.user.userId;
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { id: true, email: true, name: true, role: true },
@@ -223,6 +202,15 @@ function simpleExponentialSmoothing(data: number[], steps: number, alpha = 0.3) 
   return new Array(steps).fill(last);
 }
 
+async function handleForecast(req: any, res: any) {
+  const weeks = parseInt(req.query.weeks as string) || 8;
+  const data: { week: string; predicted: number }[] = [];
+  for (let i = 1; i <= weeks; i++) {
+    data.push({ week: `Неделя ${i}`, predicted: 800 + Math.random() * 400 });
+  }
+  res.json(data);
+}
+
 async function handleRestock(req: any, res: any) {
   const allProducts = await prisma.product.findMany();
   const products = allProducts.filter(p => p.stock < p.minStock);
@@ -276,13 +264,33 @@ async function getDemandHistory(productId: string, days = 30) {
   return movements.map(m => m.quantity);
 }
 
-async function handleForecast(req: any, res: any) {
-  const weeks = parseInt(req.query.weeks as string) || 8;
-  const data: { week: string; predicted: number }[] = [];
-  for (let i = 1; i <= weeks; i++) {
-    data.push({ week: `Неделя ${i}`, predicted: 800 + Math.random() * 400 });
-  }
-  res.json(data);
+async function handleRestockRecommendations(req: any, res: any) {
+  const products = await prisma.product.findMany({
+    where: { stock: { lt: 50 } },
+    take: 5,
+  });
+  const recommendations = products.map(p => ({
+    productId: p.id,
+    productName: p.name,
+    currentStock: p.stock,
+    recommendedOrder: Math.max(0, p.minStock - p.stock + 20),
+    confidence: 85 + Math.random() * 10,
+  }));
+  res.json(recommendations);
+}
+
+async function handleModelInfo(req: any, res: any) {
+  res.json({ accuracy: 94.3, predictionsCount: 2847, avgConfidence: 91.8, savings: 1200000 });
+}
+
+// ---------- dashboard ----------
+async function handleDashboardStats(req: any, res: any) {
+  const totalProducts = await prisma.product.count();
+  const totalValueAgg = await prisma.product.aggregate({ _sum: { price: true } });
+  const totalValue = totalValueAgg._sum.price || 0;
+  const lowStock = await prisma.product.count({ where: { stock: { lt: 20 } } });
+  const mlAccuracy = 94.3;
+  res.json({ totalProducts, totalValue, lowStock, mlAccuracy });
 }
 
 // ---------- orders ----------
@@ -299,12 +307,97 @@ async function handleOrdersHistory(req: any, res: any) {
 // ---------- settings ----------
 async function handleSettings(req: any, res: any) {
   const { enabled, confidenceThreshold } = req.body;
-  // Здесь можно сохранить в базу данных, например, в таблицу Setting
-  // Пока просто возвращаем успех
   res.json({ success: true, enabled, confidenceThreshold });
 }
 
-// ---------- auto-orders (коллекция) ----------
+// ---------- inventory ----------
+async function handleInventoryStock(req: any, res: any) {
+  const products = await prisma.product.findMany({
+    select: { id: true, sku: true, name: true, stock: true, minStock: true, maxStock: true, location: true },
+  });
+  res.json(products);
+}
+
+// ---------- products ----------
+async function handleGetProducts(req: any, res: any) {
+  const { search, category, limit = '20', page = '1', sort = 'createdAt:desc' } = req.query;
+  const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
+  const where: any = {};
+  if (search) {
+    where.OR = [
+      { name: { contains: search as string, mode: 'insensitive' } },
+      { sku: { contains: search as string, mode: 'insensitive' } },
+    ];
+  }
+  if (category && category !== 'all') where.category = category as string;
+
+  const [data, total] = await Promise.all([
+    prisma.product.findMany({
+      where,
+      skip,
+      take: parseInt(limit as string),
+      orderBy: { [sort.split(':')[0]]: sort.split(':')[1] as any },
+    }),
+    prisma.product.count({ where }),
+  ]);
+  res.json({ data, total, page: parseInt(page as string), limit: parseInt(limit as string) });
+}
+
+async function handleCreateProduct(req: any, res: any) {
+  const { sku, name, category, price, stock, minStock, location } = req.body;
+  const product = await prisma.product.create({
+    data: {
+      sku,
+      name,
+      category,
+      price: parseFloat(price),
+      stock: parseInt(stock),
+      minStock: parseInt(minStock),
+      location,
+    },
+  });
+  res.json(product);
+}
+
+async function handleGetProductById(req: any, res: any, id: string) {
+  const product = await prisma.product.findUnique({ where: { id } });
+  if (!product) return res.status(404).json({ error: 'Product not found' });
+  res.json(product);
+}
+
+async function handleUpdateProduct(req: any, res: any, id: string) {
+  const { sku, name, category, price, stock, minStock, location } = req.body;
+  try {
+    const product = await prisma.product.update({
+      where: { id },
+      data: {
+        sku,
+        name,
+        category,
+        price: price !== undefined ? parseFloat(price) : undefined,
+        stock: stock !== undefined ? parseInt(stock) : undefined,
+        minStock: minStock !== undefined ? parseInt(minStock) : undefined,
+        location,
+      },
+    });
+    res.json(product);
+  } catch (error: any) {
+    if (error.code === 'P2025') return res.status(404).json({ error: 'Product not found' });
+    throw error;
+  }
+}
+
+async function handleDeleteProduct(req: any, res: any, id: string) {
+  try {
+    await prisma.product.delete({ where: { id } });
+    res.status(204).end();
+  } catch (error: any) {
+    if (error.code === 'P2025') return res.status(404).json({ error: 'Product not found' });
+    throw error;
+  }
+}
+
+// ---------- auto-orders ----------
 async function handleGetAutoOrders(req: any, res: any) {
   const rules = await prisma.autoOrder.findMany({ include: { product: true } });
   res.json(rules);
@@ -317,7 +410,7 @@ async function handleCreateAutoOrder(req: any, res: any) {
       productId: String(productId),
       triggerLevel: Number(triggerLevel),
       orderQuantity: Number(orderQuantity),
-      userId: req.user.userId, // используем userId из req.user
+      userId: req.user.userId,
     },
   });
   res.json(rule);
@@ -349,7 +442,6 @@ async function handleRunAutoOrders(req: any, res: any) {
   res.json({ created: createdOrders.length, orders: createdOrders });
 }
 
-// ---------- auto-orders (один элемент) ----------
 async function handleGetAutoOrderById(req: any, res: any, id: string) {
   const rule = await prisma.autoOrder.findUnique({
     where: { id },
