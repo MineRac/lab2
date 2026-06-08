@@ -4,7 +4,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Label } from './ui/label';
-import { api } from '../lib/api';
 
 interface LoginProps {
   onLogin: () => void;
@@ -24,11 +23,30 @@ export default function Login({ onLogin }: LoginProps) {
       return;
     }
     setLoading(true);
+    setError('');
+
     try {
-      const data = await api.post('/auth/login', { email, password });
+      // Прямой вызов fetch с полным путём /api/auth/login
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      // Парсим ответ
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || `Ошибка ${response.status}`);
+      }
+
+      // Сохраняем токен и вызываем onLogin
       localStorage.setItem('token', data.token);
       onLogin();
     } catch (err: any) {
+      console.error('Login error:', err);
       setError(err.message || 'Ошибка входа');
     } finally {
       setLoading(false);
@@ -78,12 +96,20 @@ export default function Login({ onLogin }: LoginProps) {
                     onChange={(e) => setPassword(e.target.value)}
                     className="pl-10 pr-10"
                   />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+                  >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
               </div>
-              {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{error}</div>}
+              {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                  {error}
+                </div>
+              )}
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? 'Вход...' : 'Войти'}
               </Button>
