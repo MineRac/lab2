@@ -11,11 +11,12 @@ import { generateToken } from '../lib/jwt';
 export default async function handler(req: any, res: any) {
   // Нормализация пути и метода
   const rawUrl = req.url || '';
-  const path = rawUrl.split('?')[0]; // убираем query-параметры
+  const path = rawUrl.split('?')[0];
   const method = (req.method || '').toUpperCase();
 
-  // Обработка CORS preflight (необязательно, но помогает избежать ошибок)
+  // Обработка CORS preflight (OPTIONS)
   if (method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     return res.status(204).end();
@@ -31,7 +32,7 @@ export default async function handler(req: any, res: any) {
 
   // Всё остальное требует авторизации
   return withAuth(async (req: any, res: any) => {
-    // Внутри withAuth тоже нормализуем
+    // Внутри withAuth тоже нормализуем путь и метод
     const innerRawUrl = req.url || '';
     const innerPath = innerRawUrl.split('?')[0];
     const innerMethod = (req.method || '').toUpperCase();
