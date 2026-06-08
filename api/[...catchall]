@@ -9,79 +9,94 @@ import { generateToken } from '../lib/jwt';
 //  Маршрутизация (публичные эндпоинты)
 // ----------------------------------------------------------------------
 export default async function handler(req: any, res: any) {
-  const { url, method } = req;
+  // Нормализация пути и метода
+  const rawUrl = req.url || '';
+  const path = rawUrl.split('?')[0]; // убираем query-параметры
+  const method = (req.method || '').toUpperCase();
 
-  if (url === '/api/auth/login' && method === 'POST') {
+  // Обработка CORS preflight (необязательно, но помогает избежать ошибок)
+  if (method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    return res.status(204).end();
+  }
+
+  // Публичные эндпоинты (без авторизации)
+  if (path === '/api/auth/login' && method === 'POST') {
     return handleLogin(req, res);
   }
-  if (url === '/api/auth/logout' && method === 'POST') {
+  if (path === '/api/auth/logout' && method === 'POST') {
     return handleLogout(req, res);
   }
 
+  // Всё остальное требует авторизации
   return withAuth(async (req: any, res: any) => {
-    const { url, method } = req;
+    // Внутри withAuth тоже нормализуем
+    const innerRawUrl = req.url || '';
+    const innerPath = innerRawUrl.split('?')[0];
+    const innerMethod = (req.method || '').toUpperCase();
 
     // --- auth ---
-    if (url === '/api/auth/me' && method === 'GET') return handleMe(req, res);
+    if (innerPath === '/api/auth/me' && innerMethod === 'GET') return handleMe(req, res);
 
     // --- dashboard ---
-    if (url === '/api/dashboard/stats' && method === 'GET') return handleDashboardStats(req, res);
+    if (innerPath === '/api/dashboard/stats' && innerMethod === 'GET') return handleDashboardStats(req, res);
 
     // --- analytics ---
-    if (url === '/api/analytics/categories' && method === 'GET') return handleCategories(req, res);
-    if (url === '/api/analytics/overview' && method === 'GET') return handleOverview(req, res);
-    if (url === '/api/analytics/revenue' && method === 'GET') return handleRevenue(req, res);
-    if (url === '/api/analytics/seasonality' && method === 'GET') return handleSeasonality(req, res);
-    if (url === '/api/analytics/turnover' && method === 'GET') return handleTurnover(req, res);
-    if (url === '/api/analytics/turnover-by-category' && method === 'GET') return handleTurnoverByCategory(req, res);
+    if (innerPath === '/api/analytics/categories' && innerMethod === 'GET') return handleCategories(req, res);
+    if (innerPath === '/api/analytics/overview' && innerMethod === 'GET') return handleOverview(req, res);
+    if (innerPath === '/api/analytics/revenue' && innerMethod === 'GET') return handleRevenue(req, res);
+    if (innerPath === '/api/analytics/seasonality' && innerMethod === 'GET') return handleSeasonality(req, res);
+    if (innerPath === '/api/analytics/turnover' && innerMethod === 'GET') return handleTurnover(req, res);
+    if (innerPath === '/api/analytics/turnover-by-category' && innerMethod === 'GET') return handleTurnoverByCategory(req, res);
 
     // --- predictions ---
-    if (url === '/api/predictions/demand' && method === 'GET') return handleDemand(req, res);
-    if (url === '/api/predictions/restock' && method === 'GET') return handleRestock(req, res);
-    if (url === '/api/predictions/forecast' && method === 'GET') return handleForecast(req, res);
-    if (url === '/api/predictions/model-info' && method === 'GET') return handleModelInfo(req, res);
-    if (url === '/api/predictions/restock-recommendations' && method === 'GET') return handleRestockRecommendations(req, res);
+    if (innerPath === '/api/predictions/demand' && innerMethod === 'GET') return handleDemand(req, res);
+    if (innerPath === '/api/predictions/restock' && innerMethod === 'GET') return handleRestock(req, res);
+    if (innerPath === '/api/predictions/forecast' && innerMethod === 'GET') return handleForecast(req, res);
+    if (innerPath === '/api/predictions/model-info' && innerMethod === 'GET') return handleModelInfo(req, res);
+    if (innerPath === '/api/predictions/restock-recommendations' && innerMethod === 'GET') return handleRestockRecommendations(req, res);
 
     // --- orders ---
-    if (url === '/api/orders/history' && method === 'GET') return handleOrdersHistory(req, res);
+    if (innerPath === '/api/orders/history' && innerMethod === 'GET') return handleOrdersHistory(req, res);
 
     // --- settings ---
-    if (url === '/api/settings' && method === 'POST') return handleSettings(req, res);
+    if (innerPath === '/api/settings' && innerMethod === 'POST') return handleSettings(req, res);
 
     // --- products (полноценный CRUD + пагинация) ---
-    if (url === '/api/products' && method === 'GET') return handleGetProducts(req, res);
-    if (url === '/api/products' && method === 'POST') return handleCreateProduct(req, res);
-    const productMatch = url.match(/^\/api\/products\/([^\/]+)$/);
+    if (innerPath === '/api/products' && innerMethod === 'GET') return handleGetProducts(req, res);
+    if (innerPath === '/api/products' && innerMethod === 'POST') return handleCreateProduct(req, res);
+    const productMatch = innerPath.match(/^\/api\/products\/([^\/]+)$/);
     if (productMatch) {
       const id = productMatch[1];
-      if (method === 'GET') return handleGetProductById(req, res, id);
-      if (method === 'PUT') return handleUpdateProduct(req, res, id);
-      if (method === 'DELETE') return handleDeleteProduct(req, res, id);
+      if (innerMethod === 'GET') return handleGetProductById(req, res, id);
+      if (innerMethod === 'PUT') return handleUpdateProduct(req, res, id);
+      if (innerMethod === 'DELETE') return handleDeleteProduct(req, res, id);
     }
 
     // --- inventory (алиас для products – чтобы фронт работал как есть) ---
-    if (url === '/api/inventory' && method === 'GET') return handleGetProducts(req, res);
-    if (url === '/api/inventory' && method === 'POST') return handleCreateProduct(req, res);
-    const invMatch = url.match(/^\/api\/inventory\/([^\/]+)$/);
+    if (innerPath === '/api/inventory' && innerMethod === 'GET') return handleGetProducts(req, res);
+    if (innerPath === '/api/inventory' && innerMethod === 'POST') return handleCreateProduct(req, res);
+    const invMatch = innerPath.match(/^\/api\/inventory\/([^\/]+)$/);
     if (invMatch) {
       const id = invMatch[1];
-      if (method === 'GET') return handleGetProductById(req, res, id);
-      if (method === 'PUT') return handleUpdateProduct(req, res, id);
-      if (method === 'DELETE') return handleDeleteProduct(req, res, id);
+      if (innerMethod === 'GET') return handleGetProductById(req, res, id);
+      if (innerMethod === 'PUT') return handleUpdateProduct(req, res, id);
+      if (innerMethod === 'DELETE') return handleDeleteProduct(req, res, id);
     }
 
     // --- auto-orders ---
-    if (url === '/api/auto-orders/history' && method === 'GET') return handleOrdersHistory(req, res);
-    if (url === '/api/auto-orders/settings' && method === 'POST') return handleAutoOrdersSettings(req, res);
-    if (url === '/api/auto-orders' && method === 'GET') return handleGetAutoOrders(req, res);
-    if (url === '/api/auto-orders' && method === 'POST') return handleCreateAutoOrder(req, res);
-    if (url === '/api/auto-orders/run' && method === 'POST') return handleRunAutoOrders(req, res);
-    const autoOrderMatch = url.match(/^\/api\/auto-orders\/([^\/]+)$/);
+    if (innerPath === '/api/auto-orders/history' && innerMethod === 'GET') return handleOrdersHistory(req, res);
+    if (innerPath === '/api/auto-orders/settings' && innerMethod === 'POST') return handleAutoOrdersSettings(req, res);
+    if (innerPath === '/api/auto-orders' && innerMethod === 'GET') return handleGetAutoOrders(req, res);
+    if (innerPath === '/api/auto-orders' && innerMethod === 'POST') return handleCreateAutoOrder(req, res);
+    if (innerPath === '/api/auto-orders/run' && innerMethod === 'POST') return handleRunAutoOrders(req, res);
+    const autoOrderMatch = innerPath.match(/^\/api\/auto-orders\/([^\/]+)$/);
     if (autoOrderMatch) {
       const id = autoOrderMatch[1];
-      if (method === 'GET') return handleGetAutoOrderById(req, res, id);
-      if (method === 'PUT') return handleUpdateAutoOrder(req, res, id);
-      if (method === 'DELETE') return handleDeleteAutoOrder(req, res, id);
+      if (innerMethod === 'GET') return handleGetAutoOrderById(req, res, id);
+      if (innerMethod === 'PUT') return handleUpdateAutoOrder(req, res, id);
+      if (innerMethod === 'DELETE') return handleDeleteAutoOrder(req, res, id);
     }
 
     res.status(404).json({ error: 'API endpoint not found' });
@@ -92,7 +107,7 @@ export default async function handler(req: any, res: any) {
 //  Публичные обработчики
 // ----------------------------------------------------------------------
 async function handleLogin(req: any, res: any) {
-  if (req.method !== 'POST') return res.status(405).end();
+  if ((req.method || '').toUpperCase() !== 'POST') return res.status(405).end();
   const { email, password } = req.body;
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user || !(await bcrypt.compare(password, user.password))) {
@@ -481,6 +496,5 @@ async function handleDeleteAutoOrder(req: any, res: any, id: string) {
 
 async function handleAutoOrdersSettings(req: any, res: any) {
   const { enabled, confidenceThreshold } = req.body;
-  // Здесь можно сохранить в таблицу настроек, но для демо просто возвращаем успех
   res.json({ success: true, enabled, confidenceThreshold });
 }
